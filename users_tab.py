@@ -29,12 +29,12 @@ class UsersTab(BaseTab):
         
         scrollbar = ttk.Scrollbar(table_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        self.tree = ttk.Treeview(table_frame, columns=("id","name","email","city","approved"), 
+
+        self.tree = ttk.Treeview(table_frame, columns=("ID","Nome","Email","Cidade","Aprovado"), 
                                 show="headings", height=15, yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.tree.yview)
-        
-        for c, w in (("id",60), ("name",160), ("email",180), ("city",120), ("approved",90)):
+
+        for c, w in (("ID",60), ("Nome",160), ("Email",180), ("Cidade",120), ("Aprovado",90)):
             self.tree.heading(c, text=c.upper())
             self.tree.column(c, width=w, anchor=tk.W)
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -79,21 +79,6 @@ class UsersTab(BaseTab):
         r = self.create_form_field(scrollable_frame, "Aprovado", r)
         self.cb_approved = ttk.Combobox(scrollable_frame, values=["", "Sim", "Não"], state="readonly"); self.cb_approved.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
 
-        r = self.create_form_field(scrollable_frame, "Preferências (JSON)", r, False, "Ex: {\"species\":\"cachorro\"}")
-        self.e_prefs = ttk.Entry(scrollable_frame); self.e_prefs.grid(row=r, column=0, sticky="we", pady=(0, 15)); r+=1
-
-        # Favorites subpanel
-        fav_frame = ttk.LabelFrame(scrollable_frame, text="Favoritos do Usuário")
-        fav_frame.grid(row=r, column=0, sticky="nsew", pady=6); r+=1
-        fav_frame.columnconfigure(0, weight=1)
-        
-        self.lb_favs = tk.Listbox(fav_frame, height=5)
-        self.lb_favs.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
-        fav_btns = ttk.Frame(fav_frame)
-        fav_btns.pack(side=tk.RIGHT, fill=tk.Y, padx=5)
-        ttk.Button(fav_btns, text="Adicionar...", command=self.add_favorite).pack(fill=tk.X, pady=2)
-        ttk.Button(fav_btns, text="Remover", command=self.remove_favorite).pack(fill=tk.X, pady=2)
-
         # Buttons
         btn_frame = ttk.Frame(scrollable_frame)
         btn_frame.grid(row=r, column=0, sticky="we", pady=10)
@@ -125,8 +110,6 @@ class UsersTab(BaseTab):
         self.e_phone.delete(0, tk.END); self.e_phone.insert(0, u.phone or "")
         self.e_city.delete(0, tk.END); self.e_city.insert(0, u.city or "")
         self.cb_approved.set("Sim" if u.approved else "Não")
-        self.e_prefs.delete(0, tk.END); self.e_prefs.insert(0, u.adoption_preferences or "")
-        self.reload_favorites(u)
 
     def reload_favorites(self, u: User):
         self.lb_favs.delete(0, tk.END)
@@ -135,10 +118,9 @@ class UsersTab(BaseTab):
 
     def new(self):
         self.selected_id = None
-        for e in (self.e_name, self.e_email, self.e_phone, self.e_city, self.e_prefs):
+        for e in (self.e_name, self.e_email, self.e_phone, self.e_city):
             e.delete(0, tk.END)
         self.cb_approved.set("")
-        self.lb_favs.delete(0, tk.END)
 
     def save(self):
         name = self.e_name.get().strip()
@@ -146,13 +128,6 @@ class UsersTab(BaseTab):
         if not name or not email:
             self.error("Nome e Email são obrigatórios.")
             return
-        prefs = self.e_prefs.get().strip()
-        if prefs:
-            try:
-                json.loads(prefs)
-            except Exception:
-                self.error("Preferências deve ser JSON válido (ex: {\"species\":\"cachorro\"})")
-                return
 
         if self.selected_id:
             u = session.get(User, self.selected_id)
@@ -165,7 +140,6 @@ class UsersTab(BaseTab):
         u.phone = self.e_phone.get().strip() or None
         u.city = self.e_city.get().strip() or None
         u.approved = (self.cb_approved.get() == "Sim")
-        u.adoption_preferences = prefs or None
 
         session.commit()
         self.load()

@@ -11,8 +11,6 @@ from search_tab import SearchTab
 from shelter_tab import ShelterTab
 from models import Shelter
 
-#teste
-
 class App(tk.Tk):
     def __init__(self):
         super().__init__()

@@ -2,11 +2,11 @@
 from datetime import datetime, date
 from typing import Optional
 
-# Constants
-STATUSES = ["available", "in_process", "adopted"]
-ADOPTION_STEPS = ["questionnaire", "screening", "visit", "docs", "approved", "finalized", "declined"]
-SIZES = ["pequeno", "médio", "grande", ""]
-GENDERS = ["macho", "fêmea", ""]
+# Constantes(Seleção de lista)
+STATUSES = ["","Disponível", "Em processo", "Adotado", "Indisponível"]
+ADOPTION_STEPS = ["Questionário", "Triagem", "Visita", "Documentos", "Aprovado", "Finalizado", "Recusado"]
+SIZES = ["", "Pequeno", "Médio", "Grande"]
+GENDERS = ["", "Macho", "Fêmea"]
 
 def parse_bool(value: str) -> bool:
     return str(value).strip().lower() in ("1", "true", "t", "yes", "y", "sim")
