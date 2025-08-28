@@ -30,11 +30,11 @@ class AnimalsTab(BaseTab):
         scrollbar = ttk.Scrollbar(table_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        self.tree = ttk.Treeview(table_frame, columns=("id","name","species","age","size","gender","status","location"), 
+        self.tree = ttk.Treeview(table_frame, columns=("ID","Nome","Espécie","Idade","Tamanho","Gênero","Status","Localização"), 
                                 show="headings", height=15, yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.tree.yview)
         
-        for c, w in (("id",60), ("name",140), ("species",100), ("age",60), ("size",80), ("gender",80), ("status",100), ("location",120)):
+        for c, w in (("ID",60), ("Nome",140), ("Espécie",100), ("Idade",60), ("Tamanho",80), ("Gênero",80), ("Status",100), ("Localização",120)):
             self.tree.heading(c, text=c.upper())
             self.tree.column(c, width=w, anchor=tk.W)
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -95,17 +95,11 @@ class AnimalsTab(BaseTab):
         r = self.create_form_field(scrollable_frame, "Temperamento", r)
         self.e_temp = ttk.Entry(scrollable_frame); self.e_temp.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
 
-        r = self.create_form_field(scrollable_frame, "Histórico de Saúde", r)
-        self.e_health = ttk.Entry(scrollable_frame); self.e_health.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
-
         r = self.create_form_field(scrollable_frame, "Status", r)
         self.cb_status = ttk.Combobox(scrollable_frame, values=STATUSES, state="readonly"); self.cb_status.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
 
         r = self.create_form_field(scrollable_frame, "Local", r)
         self.e_location = ttk.Entry(scrollable_frame); self.e_location.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
-
-        r = self.create_form_field(scrollable_frame, "Fotos (JSON array)", r, False, "Ex: [\"url1\", \"url2\"]")
-        self.e_photos = ttk.Entry(scrollable_frame); self.e_photos.grid(row=r, column=0, sticky="we", pady=(0, 15)); r+=1
 
         # Buttons
         btn_frame = ttk.Frame(scrollable_frame)
@@ -150,7 +144,7 @@ class AnimalsTab(BaseTab):
 
     def new(self):
         self.selected_id = None
-        for e in (self.e_name, self.e_species, self.e_breed, self.e_age, self.e_temp, self.e_health, self.e_location, self.e_photos):
+        for e in (self.e_name, self.e_species, self.e_breed, self.e_age, self.e_temp, self.e_location):
             e.delete(0, tk.END)
         self.cb_size.set(""); self.cb_gender.set(""); self.cb_vacc.set(""); self.cb_neut.set(""); self.cb_status.set("available")
 
@@ -161,12 +155,6 @@ class AnimalsTab(BaseTab):
             self.error("Nome e Espécie são obrigatórios.")
             return
         age = parse_int(self.e_age.get() or "0", 0)
-        try:
-            photos_json = self.e_photos.get().strip() or "[]"
-            json.loads(photos_json)
-        except Exception:
-            self.error("Fotos deve ser uma lista JSON (ex: [\"http://...\"])")
-            return
 
         if self.selected_id:
             a = session.get(Animal, self.selected_id)
@@ -183,10 +171,8 @@ class AnimalsTab(BaseTab):
         a.vaccinated = (self.cb_vacc.get() == "Sim")
         a.neutered = (self.cb_neut.get() == "Sim")
         a.temperament = self.e_temp.get().strip() or None
-        a.health_history = self.e_health.get().strip() or None
         a.status = self.cb_status.get() or "available"
         a.location = self.e_location.get().strip() or None
-        a.photo_urls_json = photos_json
 
         session.commit()
         self.load()

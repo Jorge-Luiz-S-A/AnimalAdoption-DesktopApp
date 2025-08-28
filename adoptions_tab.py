@@ -29,8 +29,8 @@ class AdoptionsTab(BaseTab):
         
         scrollbar = ttk.Scrollbar(table_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        self.tree = ttk.Treeview(table_frame, columns=("id","animal","user","status","score","vvisit","pvisit","docs","bg"), 
+
+        self.tree = ttk.Treeview(table_frame, columns=("ID","Animal","Usuário","Status","Score","Visita Virtual","Visita Pres.","Docs","BG Check"), 
                                 show="headings", height=12, yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.tree.yview)
         
