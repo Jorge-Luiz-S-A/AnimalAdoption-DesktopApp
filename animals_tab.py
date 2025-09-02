@@ -1,188 +1,187 @@
 # animals_tab.py
 import tkinter as tk
-from tkinter import ttk, messagebox
-import json
-
+from tkinter import ttk
+from tkcalendar import DateEntry
 from base_tab import BaseTab
 from database import session
-from models import Animal
-from utils import STATUSES, SIZES, GENDERS, parse_int, combobox_set
+from models import Animal, Shelter
+from utils import SIZES, GENDERS, parse_int, combobox_set
 
 class AnimalsTab(BaseTab):
     def __init__(self, parent):
         super().__init__(parent)
-        self.pack(fill=tk.BOTH, expand=True)
-        
-        # Main container
+        self.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
         main_container = ttk.Frame(self)
-        main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        # Left panel - Table
+        main_container.pack(fill=tk.BOTH, expand=True)
+
+        # -------- Left panel: Lista de animais --------
         left_panel = ttk.Frame(main_container)
-        left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
-        
-        ttk.Label(left_panel, text="Lista de Animais", style="Header.TLabel").pack(anchor=tk.W, pady=(0, 5))
-        
-        # Table with scrollbar
+        left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0,10))
+
+        ttk.Label(left_panel, text="Lista de Animais", font=("Arial",10,"bold")).pack(anchor=tk.W, pady=(0,5))
+
         table_frame = ttk.Frame(left_panel)
         table_frame.pack(fill=tk.BOTH, expand=True)
-        
+
         scrollbar = ttk.Scrollbar(table_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        self.tree = ttk.Treeview(table_frame, columns=("ID","Nome","Espécie","Idade","Tamanho","Gênero","Status","Localização"), 
-                                show="headings", height=15, yscrollcommand=scrollbar.set)
+
+        self.tree = ttk.Treeview(
+            table_frame,
+            columns=("ID","Nome","Espécie","Idade","Porte","Sexo","Status","Local"),
+            show="headings", height=20, yscrollcommand=scrollbar.set
+        )
         scrollbar.config(command=self.tree.yview)
-        
-        for c, w in (("ID",60), ("Nome",140), ("Espécie",100), ("Idade",60), ("Tamanho",80), ("Gênero",80), ("Status",100), ("Localização",120)):
+
+        for c, w in (("ID",60), ("Nome",140), ("Espécie",100), ("Idade",60), ("Porte",80),
+                     ("Sexo",80), ("Status",100), ("Local",120)):
             self.tree.heading(c, text=c.upper())
             self.tree.column(c, width=w, anchor=tk.W)
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.tree.bind("<<TreeviewSelect>>", self.on_select)
-        
-        # Right panel - Form
+
+        # -------- Right panel: Formulário --------
         right_panel = ttk.Frame(main_container, width=400)
-        right_panel.pack(side=tk.RIGHT, fill=tk.Y, padx=(10, 0))
+        right_panel.pack(side=tk.RIGHT, fill=tk.Y)
         right_panel.pack_propagate(False)
-        
-        ttk.Label(right_panel, text="Detalhes do Animal", style="Header.TLabel").pack(anchor=tk.W, pady=(0, 10))
-        
-        # Form container with scrollbar
+
+        ttk.Label(right_panel, text="Detalhes do Animal", font=("Arial",10,"bold")).pack(anchor=tk.W, pady=(0,10))
+
         form_container = ttk.Frame(right_panel)
         form_container.pack(fill=tk.BOTH, expand=True)
-        
-        canvas = tk.Canvas(form_container, height=500)
-        scrollbar = ttk.Scrollbar(form_container, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
-        
-        scrollable_frame.bind(
+
+        canvas = tk.Canvas(form_container)
+        scrollbar_form = ttk.Scrollbar(form_container, orient="vertical", command=canvas.yview)
+        self.scrollable_frame = ttk.Frame(canvas)
+
+        self.scrollable_frame.bind(
             "<Configure>",
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
-        
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
+        canvas.create_window((0,0), window=self.scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar_form.set)
+
         canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        # Form fields
+        scrollbar_form.pack(side="right", fill="y")
+
+        # Campos do formulário (Label acima do input)
         r = 0
-        r = self.create_form_field(scrollable_frame, "Nome *", r, True)
-        self.e_name = ttk.Entry(scrollable_frame, width=32); self.e_name.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
+        fields = [
+            ("Nome *", ttk.Entry),
+            ("Espécie *", ttk.Entry),
+            ("Raça", ttk.Entry),
+            ("Idade", ttk.Entry),
+            ("Porte", ttk.Combobox, {"values": SIZES, "state": "readonly"}),
+            ("Sexo", ttk.Combobox, {"values": GENDERS, "state": "readonly"}),
+            ("Vacinado", ttk.Combobox, {"values": ["","Sim","Não"], "state": "readonly"}),
+            ("Castrado", ttk.Combobox, {"values": ["","Sim","Não"], "state": "readonly"}),
+            ("Temperamento", ttk.Entry),
+            ("Histórico de saúde", ttk.Entry),
+            ("Status", ttk.Combobox, {"values":["","Disponível","Em processo","Adotado","Indisponível"], "state":"readonly"}),
+            ("Local", ttk.Combobox, {"state":"readonly"}),
+        ]
 
-        r = self.create_form_field(scrollable_frame, "Espécie *", r, True)
-        self.e_species = ttk.Entry(scrollable_frame); self.e_species.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
+        self.inputs = {}
+        for label_text, widget_class, *opts in fields:
+            ttk.Label(self.scrollable_frame, text=label_text).grid(row=r,column=0,sticky="w", pady=(5,0))
+            r += 1
+            w_opts = opts[0] if opts else {}
+            w = widget_class(self.scrollable_frame, **w_opts)
+            w.grid(row=r, column=0, sticky="we", pady=(0,10))
+            self.inputs[label_text] = w
+            r += 1
 
-        r = self.create_form_field(scrollable_frame, "Raça", r)
-        self.e_breed = ttk.Entry(scrollable_frame); self.e_breed.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
-
-        r = self.create_form_field(scrollable_frame, "Idade (anos)", r)
-        self.e_age = ttk.Entry(scrollable_frame); self.e_age.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
-
-        r = self.create_form_field(scrollable_frame, "Porte", r)
-        self.cb_size = ttk.Combobox(scrollable_frame, values=SIZES, state="readonly"); self.cb_size.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
-
-        r = self.create_form_field(scrollable_frame, "Gênero", r)
-        self.cb_gender = ttk.Combobox(scrollable_frame, values=GENDERS, state="readonly"); self.cb_gender.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
-
-        r = self.create_form_field(scrollable_frame, "Vacinado", r)
-        self.cb_vacc = ttk.Combobox(scrollable_frame, values=["", "Sim", "Não"], state="readonly"); self.cb_vacc.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
-
-        r = self.create_form_field(scrollable_frame, "Castrado", r)
-        self.cb_neut = ttk.Combobox(scrollable_frame, values=["", "Sim", "Não"], state="readonly"); self.cb_neut.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
-
-        r = self.create_form_field(scrollable_frame, "Temperamento", r)
-        self.e_temp = ttk.Entry(scrollable_frame); self.e_temp.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
-
-        r = self.create_form_field(scrollable_frame, "Status", r)
-        self.cb_status = ttk.Combobox(scrollable_frame, values=STATUSES, state="readonly"); self.cb_status.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
-
-        r = self.create_form_field(scrollable_frame, "Local", r)
-        self.e_location = ttk.Entry(scrollable_frame); self.e_location.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
-
-        # Buttons
-        btn_frame = ttk.Frame(scrollable_frame)
-        btn_frame.grid(row=r, column=0, sticky="we", pady=10)
-        
+        # Botões
+        btn_frame = ttk.Frame(self.scrollable_frame)
+        btn_frame.grid(row=r, column=0, pady=10)
         ttk.Button(btn_frame, text="Novo", command=self.new).pack(side=tk.LEFT, padx=4)
-        ttk.Button(btn_frame, text="Salvar", command=self.save, style="Success.TButton").pack(side=tk.LEFT, padx=4)
+        ttk.Button(btn_frame, text="Salvar", command=self.save).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Excluir", command=self.delete).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Atualizar", command=self.load).pack(side=tk.LEFT, padx=4)
 
-        # Configure grid
-        scrollable_frame.columnconfigure(0, weight=1)
         self.selected_id = None
         self.load()
+        self.load_shelters()
 
+        # Scroll mouse wheel
+        canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+        self.canvas = canvas
+
+    def _on_mousewheel(self, event):
+        self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+    def load_shelters(self):
+        shelters = session.query(Shelter).order_by(Shelter.name).all()
+        self.inputs["Local"]['values'] = [s.name for s in shelters]
+
+    # ---------------- Métodos CRUD ----------------
     def load(self):
         for i in self.tree.get_children():
             self.tree.delete(i)
         for a in session.query(Animal).order_by(Animal.id.desc()).all():
             self.tree.insert("", "end", iid=str(a.id),
-                             values=(a.id, a.name, a.species, a.age, a.size or "", a.gender or "", a.status, a.location or ""))
+                             values=(a.id, a.name, a.species, a.age, a.size or "", a.gender or "",
+                                     a.status or "", a.location or ""))
 
     def on_select(self, _):
         sel = self.tree.selection()
-        if not sel:
-            return
+        if not sel: return
         a = session.get(Animal, int(sel[0]))
         self.selected_id = a.id
-        self.e_name.delete(0, tk.END); self.e_name.insert(0, a.name or "")
-        self.e_species.delete(0, tk.END); self.e_species.insert(0, a.species or "")
-        self.e_breed.delete(0, tk.END); self.e_breed.insert(0, a.breed or "")
-        self.e_age.delete(0, tk.END); self.e_age.insert(0, str(a.age or 0))
-        combobox_set(self.cb_size, a.size or "")
-        combobox_set(self.cb_gender, a.gender or "")
-        self.cb_vacc.set("Sim" if a.vaccinated else ("Não" if a.vaccinated is False else ""))
-        self.cb_neut.set("Sim" if a.neutered else ("Não" if a.neutered is False else ""))
-        self.e_temp.delete(0, tk.END); self.e_temp.insert(0, a.temperament or "")
-        self.e_health.delete(0, tk.END); self.e_health.insert(0, a.health_history or "")
-        combobox_set(self.cb_status, a.status or "available")
-        self.e_location.delete(0, tk.END); self.e_location.insert(0, a.location or "")
-        self.e_photos.delete(0, tk.END); self.e_photos.insert(0, a.photo_urls_json or "[]")
+
+        self.inputs["Nome *"].delete(0, tk.END); self.inputs["Nome *"].insert(0, a.name or "")
+        self.inputs["Espécie *"].delete(0, tk.END); self.inputs["Espécie *"].insert(0, a.species or "")
+        self.inputs["Raça"].delete(0, tk.END); self.inputs["Raça"].insert(0, a.breed or "")
+        self.inputs["Idade"].delete(0, tk.END); self.inputs["Idade"].insert(0, str(a.age or 0))
+        self.inputs["Porte"].set(a.size or "")
+        self.inputs["Sexo"].set(a.gender or "")
+        self.inputs["Vacinado"].set("Sim" if a.vaccinated else "Não")
+        self.inputs["Castrado"].set("Sim" if a.neutered else "Não")
+        self.inputs["Temperamento"].delete(0, tk.END); self.inputs["Temperamento"].insert(0, a.temperament or "")
+        self.inputs["Histórico de saúde"].delete(0, tk.END); self.inputs["Histórico de saúde"].insert(0, a.health_history or "")
+        self.inputs["Status"].set(a.status or "")
+        self.inputs["Local"].set(a.location or "")
 
     def new(self):
         self.selected_id = None
-        for e in (self.e_name, self.e_species, self.e_breed, self.e_age, self.e_temp, self.e_location):
-            e.delete(0, tk.END)
-        self.cb_size.set(""); self.cb_gender.set(""); self.cb_vacc.set(""); self.cb_neut.set(""); self.cb_status.set("available")
+        for key, w in self.inputs.items():
+            if isinstance(w, ttk.Combobox):
+                w.set("")
+            else:
+                w.delete(0, tk.END)
 
     def save(self):
-        name = self.e_name.get().strip()
-        species = self.e_species.get().strip()
-        if not name or not species:
+        if not self.inputs["Nome *"].get().strip() or not self.inputs["Espécie *"].get().strip():
             self.error("Nome e Espécie são obrigatórios.")
             return
-        age = parse_int(self.e_age.get() or "0", 0)
-
         if self.selected_id:
             a = session.get(Animal, self.selected_id)
         else:
             a = Animal()
             session.add(a)
 
-        a.name = name
-        a.species = species
-        a.breed = self.e_breed.get().strip() or None
-        a.age = age
-        a.size = self.cb_size.get() or None
-        a.gender = self.cb_gender.get() or None
-        a.vaccinated = (self.cb_vacc.get() == "Sim")
-        a.neutered = (self.cb_neut.get() == "Sim")
-        a.temperament = self.e_temp.get().strip() or None
-        a.status = self.cb_status.get() or "available"
-        a.location = self.e_location.get().strip() or None
+        a.name = self.inputs["Nome *"].get().strip()
+        a.species = self.inputs["Espécie *"].get().strip()
+        a.breed = self.inputs["Raça"].get().strip() or None
+        a.age = parse_int(self.inputs["Idade"].get() or "0", 0)
+        a.size = self.inputs["Porte"].get() or None
+        a.gender = self.inputs["Sexo"].get() or None
+        a.vaccinated = self.inputs["Vacinado"].get() == "Sim"
+        a.neutered = self.inputs["Castrado"].get() == "Sim"
+        a.temperament = self.inputs["Temperamento"].get().strip() or None
+        a.health_history = self.inputs["Histórico de saúde"].get().strip() or None
+        a.status = self.inputs["Status"].get() or None
+        a.location = self.inputs["Local"].get() or None
 
         session.commit()
         self.load()
+        self.load_shelters()
         self.info("Animal salvo com sucesso.")
 
     def delete(self):
         if not self.selected_id:
             self.error("Selecione um registro.")
-            return
-        if not messagebox.askyesno("Confirmar", "Excluir animal selecionado?"):
             return
         a = session.get(Animal, self.selected_id)
         session.delete(a)

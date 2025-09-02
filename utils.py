@@ -2,7 +2,6 @@
 from datetime import datetime, date
 from typing import Optional
 
-# Constantes(Seleção de lista)
 STATUSES = ["","Disponível", "Em processo", "Adotado", "Indisponível"]
 ADOPTION_STEPS = ["Questionário", "Triagem", "Visita", "Documentos", "Aprovado", "Finalizado", "Recusado"]
 SIZES = ["", "Pequeno", "Médio", "Grande"]
@@ -28,11 +27,9 @@ def parse_date_str(s: str) -> Optional[date]:
 def parse_dt_str(s: str) -> Optional[datetime]:
     if not s:
         return None
-    # Tenta ISO 8601: YYYY-MM-DDTHH:MM
     try:
         return datetime.fromisoformat(s)
     except Exception:
-        # fallback: "YYYY-MM-DD HH:MM"
         try:
             return datetime.strptime(s, "%Y-%m-%d %H:%M")
         except Exception:

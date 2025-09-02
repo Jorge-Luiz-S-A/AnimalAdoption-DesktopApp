@@ -1,213 +1,201 @@
 # adoptions_tab.py
 import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox
-
-from base_tab import BaseTab
+from tkinter import ttk, messagebox
 from database import session
-from models import AdoptionProcess, Animal, User, Shelter
-from utils import ADOPTION_STEPS, parse_int, parse_dt_str, yes_no, combobox_set
+from models import AdoptionProcess, Animal, User
+from datetime import datetime
 
-class AdoptionsTab(BaseTab):
+class AdoptionsTab(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.pack(fill=tk.BOTH, expand=True)
-        
-        # Main container
+
         main_container = ttk.Frame(self)
         main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        # Left panel - Table
+
+        # -------- Left panel: Lista de processos --------
         left_panel = ttk.Frame(main_container)
-        left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
-        
-        ttk.Label(left_panel, text="Processos de Adoção", style="Header.TLabel").pack(anchor=tk.W, pady=(0, 5))
-        
-        # Table with scrollbar
+        left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0,10))
+
+        ttk.Label(left_panel, text="Processos de Adoção", font=("Arial",10,"bold")).pack(anchor=tk.W, pady=(0,5))
+
         table_frame = ttk.Frame(left_panel)
         table_frame.pack(fill=tk.BOTH, expand=True)
-        
+
         scrollbar = ttk.Scrollbar(table_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.tree = ttk.Treeview(table_frame, columns=("ID","Animal","Usuário","Status","Score","Visita Virtual","Visita Pres.","Docs","BG Check"), 
-                                show="headings", height=12, yscrollcommand=scrollbar.set)
+        self.tree = ttk.Treeview(table_frame,
+                                 columns=("ID","Animal","Usuário","Status","Visita Virtual","Visita Presencial","Data Adoção"),
+                                 show="headings", yscrollcommand=scrollbar.set, height=20)
         scrollbar.config(command=self.tree.yview)
-        
-        heads = ("ID","Animal","Usuário","Status","Score","Visita Virtual","Visita Pres.","Docs","BG Check")
-        for c, h, w in zip(self.tree["columns"], heads, (60,160,160,110,70,140,120,70,80)):
-            self.tree.heading(c, text=h)
+
+        for c, w in (("ID",50),("Animal",150),("Usuário",150),("Status",100),
+                     ("Visita Virtual",120),("Visita Presencial",120),("Data Adoção",100)):
+            self.tree.heading(c, text=c.upper())
             self.tree.column(c, width=w, anchor=tk.W)
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.tree.bind("<<TreeviewSelect>>", self.on_select)
-        
-        # Right panel - Form
-        right_panel = ttk.Frame(main_container, width=400)
-        right_panel.pack(side=tk.RIGHT, fill=tk.Y, padx=(10, 0))
+
+        # -------- Right panel: Formulário --------
+        right_panel = ttk.Frame(main_container, width=350)
+        right_panel.pack(side=tk.RIGHT, fill=tk.Y)
         right_panel.pack_propagate(False)
-        
-        ttk.Label(right_panel, text="Detalhes do Processo", style="Header.TLabel").pack(anchor=tk.W, pady=(0, 10))
-        
-        # Form container with scrollbar
+
+        ttk.Label(right_panel, text="Detalhes do Processo", font=("Arial",10,"bold")).pack(anchor=tk.W, pady=(0,10))
+
         form_container = ttk.Frame(right_panel)
         form_container.pack(fill=tk.BOTH, expand=True)
-        
-        canvas = tk.Canvas(form_container, height=500)
-        scrollbar = ttk.Scrollbar(form_container, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
-        
-        scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
+
+        canvas = tk.Canvas(form_container)
+        scrollbar_form = ttk.Scrollbar(form_container, orient="vertical", command=canvas.yview)
+        self.scrollable_frame = ttk.Frame(canvas)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        canvas.create_window((0,0), window=self.scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar_form.set)
+
         canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        # Form fields
+        scrollbar_form.pack(side="right", fill="y")
+
+        # Campos do formulário
         r = 0
-        r = self.create_form_field(scrollable_frame, "Animal *", r, True)
-        self.cb_animal = ttk.Combobox(scrollable_frame, state="readonly", width=40); self.cb_animal.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
+        fields = [
+            ("Animal *", ttk.Combobox, {"state":"readonly", "width":30}),
+            ("Usuário *", ttk.Combobox, {"state":"readonly", "width":30}),
+            ("Status", ttk.Combobox, {"values":["","questionnaire","screening","visit","approved","finalized","declined"], "state":"readonly", "width":30}),
+            ("Visita Virtual (DD/MM/AAAA)", ttk.Entry, {"width":30}),
+            ("Visita Presencial (DD/MM/AAAA)", ttk.Entry, {"width":30}),
+            ("Data Adoção (DD/MM/AAAA)", ttk.Entry, {"width":30}),
+        ]
 
-        r = self.create_form_field(scrollable_frame, "Usuário *", r, True)
-        self.cb_user = ttk.Combobox(scrollable_frame, state="readonly", width=40); self.cb_user.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
+        self.inputs = {}
+        for label_text, widget_class, opts in fields:
+            ttk.Label(self.scrollable_frame, text=label_text).grid(row=r, column=0, columnspan=2, sticky="w", pady=(5,0))
+            r += 1
+            w = widget_class(self.scrollable_frame, **opts)
+            w.grid(row=r, column=0, columnspan=2, sticky="we", pady=(0,5))
+            self.inputs[label_text] = w
+            r += 1
 
-        r = self.create_form_field(scrollable_frame, "Status", r)
-        self.cb_status = ttk.Combobox(scrollable_frame, values=ADOPTION_STEPS, state="readonly"); self.cb_status.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
+        # Observações
+        ttk.Label(self.scrollable_frame, text="Observações").grid(row=r, column=0, columnspan=2, sticky="w", pady=(5,0)); r+=1
+        self.e_notes = tk.Text(self.scrollable_frame, width=30, height=4)
+        self.e_notes.grid(row=r, column=0, columnspan=2, sticky="we", pady=(0,5)); r+=1
 
-        r = self.create_form_field(scrollable_frame, "Score (0-100)", r)
-        self.e_score = ttk.Entry(scrollable_frame); self.e_score.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
-
-        r = self.create_form_field(scrollable_frame, "Visita Virtual", r, False, "YYYY-MM-DD HH:MM")
-        self.e_vvisit = ttk.Entry(scrollable_frame); self.e_vvisit.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
-
-        r = self.create_form_field(scrollable_frame, "Visita Presencial", r, False, "YYYY-MM-DD HH:MM")
-        self.e_pvisit = ttk.Entry(scrollable_frame); self.e_pvisit.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
-
-        r = self.create_form_field(scrollable_frame, "Docs enviados", r)
-        self.cb_docs = ttk.Combobox(scrollable_frame, values=["", "Sim", "Não"], state="readonly"); self.cb_docs.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
-
-        r = self.create_form_field(scrollable_frame, "BG Check OK", r)
-        self.cb_bg = ttk.Combobox(scrollable_frame, values=["", "Sim", "Não"], state="readonly"); self.cb_bg.grid(row=r, column=0, sticky="we", pady=(0, 10)); r+=1
-
-        r = self.create_form_field(scrollable_frame, "Notas", r)
-        self.e_notes = ttk.Entry(scrollable_frame); self.e_notes.grid(row=r, column=0, sticky="we", pady=(0, 15)); r+=1
-
-        # Buttons
-        btn_frame = ttk.Frame(scrollable_frame)
-        btn_frame.grid(row=r, column=0, sticky="we", pady=10)
-        
+        # Botões
+        btn_frame = ttk.Frame(self.scrollable_frame)
+        btn_frame.grid(row=r, column=0, columnspan=2, pady=10)
         ttk.Button(btn_frame, text="Novo", command=self.new).pack(side=tk.LEFT, padx=4)
-        ttk.Button(btn_frame, text="Salvar", command=self.save, style="Success.TButton").pack(side=tk.LEFT, padx=4)
+        ttk.Button(btn_frame, text="Salvar", command=self.save).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Excluir", command=self.delete).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Atualizar", command=self.load).pack(side=tk.LEFT, padx=4)
 
-        scrollable_frame.columnconfigure(0, weight=1)
         self.selected_id = None
-        self.reload_refs()
         self.load()
 
-    def reload_refs(self):
-        self._animals = session.query(Animal).order_by(Animal.name).all()
-        self._users = session.query(User).order_by(User.name).all()
-        self.cb_animal["values"] = [f"#{a.id} - {a.name} ({a.species})" for a in self._animals]
-        self.cb_user["values"] = [f"#{u.id} - {u.name} <{u.email}>" for u in self._users]
-
+    # ---------------- Funções ----------------
     def load(self):
+        # Atualiza combobox
+        self.inputs["Animal *"]['values'] = [f"#{a.id} - {a.name}" for a in session.query(Animal).order_by(Animal.id.desc()).all()]
+        self.inputs["Usuário *"]['values'] = [f"#{u.id} - {u.name}" for u in session.query(User).order_by(User.id.desc()).all()]
+
+        # Atualiza lista de processos
         for i in self.tree.get_children():
             self.tree.delete(i)
-        for ad in session.query(AdoptionProcess).order_by(AdoptionProcess.id.desc()).all():
-            self.tree.insert("", "end", iid=str(ad.id),
-                values=(
-                    ad.id,
-                    f"#{ad.animal_id} - {ad.animal.name if ad.animal else ''}",
-                    f"#{ad.user_id} - {ad.user.name if ad.user else ''}",
-                    ad.status,
-                    ad.questionnaire_score if ad.questionnaire_score is not None else "",
-                    ad.virtual_visit_at.strftime("%Y-%m-%d %H:%M") if ad.virtual_visit_at else "",
-                    ad.in_person_visit_at.strftime("%Y-%m-%d %H:%M") if ad.in_person_visit_at else "",
-                    yes_no(ad.docs_submitted),
-                    yes_no(ad.background_check_ok),
-                )
-            )
+        for p in session.query(AdoptionProcess).order_by(AdoptionProcess.id.desc()).all():
+            self.tree.insert("", "end", iid=str(p.id),
+                             values=(p.id,
+                                     f"#{p.animal.id} - {p.animal.name}",
+                                     f"#{p.user.id} - {p.user.name}",
+                                     p.status or "",
+                                     p.virtual_visit_at.strftime("%d/%m/%Y") if p.virtual_visit_at else "",
+                                     p.in_person_visit_at.strftime("%d/%m/%Y") if p.in_person_visit_at else "",
+                                     p.docs_submitted.strftime("%d/%m/%Y") if p.docs_submitted else ""))
 
-    def on_select(self, _):
+    def on_select(self,_):
         sel = self.tree.selection()
-        if not sel:
-            return
-        ad = session.get(AdoptionProcess, int(sel[0]))
-        self.selected_id = ad.id
-        self.reload_refs()
-        ai = next((i for i, a in enumerate(self._animals) if a.id == ad.animal_id), -1)
-        ui = next((i for i, u in enumerate(self._users) if u.id == ad.user_id), -1)
-        if ai >= 0: self.cb_animal.current(ai)
-        if ui >= 0: self.cb_user.current(ui)
-        self.cb_status.set(ad.status or "questionnaire")
-        self.e_score.delete(0, tk.END); self.e_score.insert(0, "" if ad.questionnaire_score is None else str(ad.questionnaire_score))
-        self.e_vvisit.delete(0, tk.END); self.e_vvisit.insert(0, ad.virtual_visit_at.strftime("%Y-%m-%d %H:%M") if ad.virtual_visit_at else "")
-        self.e_pvisit.delete(0, tk.END); self.e_pvisit.insert(0, ad.in_person_visit_at.strftime("%Y-%m-%d %H:%M") if ad.in_person_visit_at else "")
-        self.cb_docs.set("Sim" if ad.docs_submitted else "Não")
-        if ad.background_check_ok is None:
-            self.cb_bg.set("")
-        else:
-            self.cb_bg.set("Sim" if ad.background_check_ok else "Não")
-        self.e_notes.delete(0, tk.END); self.e_notes.insert(0, ad.notes or "")
+        if not sel: return
+        p = session.get(AdoptionProcess,int(sel[0]))
+        self.selected_id = p.id
+
+        self.inputs["Animal *"].set(f"#{p.animal.id} - {p.animal.name}")
+        self.inputs["Usuário *"].set(f"#{p.user.id} - {p.user.name}")
+        self.inputs["Status"].set(p.status or "")
+        self.inputs["Visita Virtual (DD/MM/AAAA)"].delete(0,tk.END)
+        if p.virtual_visit_at:
+            self.inputs["Visita Virtual (DD/MM/AAAA)"].insert(0,p.virtual_visit_at.strftime("%d/%m/%Y"))
+        self.inputs["Visita Presencial (DD/MM/AAAA)"].delete(0,tk.END)
+        if p.in_person_visit_at:
+            self.inputs["Visita Presencial (DD/MM/AAAA)"].insert(0,p.in_person_visit_at.strftime("%d/%m/%Y"))
+        self.inputs["Data Adoção (DD/MM/AAAA)"].delete(0,tk.END)
+        if p.docs_submitted:
+            self.inputs["Data Adoção (DD/MM/AAAA)"].insert(0,p.docs_submitted.strftime("%d/%m/%Y"))
+        self.e_notes.delete("1.0", tk.END)
+        self.e_notes.insert(tk.END, p.notes or "")
 
     def new(self):
         self.selected_id = None
-        self.reload_refs()
-        self.cb_animal.set(""); self.cb_user.set("")
-        self.cb_status.set("questionnaire")
-        for e in (self.e_score, self.e_vvisit, self.e_pvisit, self.e_notes):
-            e.delete(0, tk.END)
-        self.cb_docs.set(""); self.cb_bg.set("")
+        for key in self.inputs:
+            w = self.inputs[key]
+            if isinstance(w, ttk.Combobox):
+                w.set("")
+            else:
+                w.delete(0,tk.END)
+        self.e_notes.delete("1.0",tk.END)
 
     def save(self):
-        if self.cb_animal.current() < 0 or self.cb_user.current() < 0:
-            self.error("Selecione Animal e Usuário.")
+        if not self.inputs["Animal *"].get() or not self.inputs["Usuário *"].get():
+            messagebox.showerror("Erro","Selecione animal e usuário")
             return
-        animal = self._animals[self.cb_animal.current()]
-        user = self._users[self.cb_user.current()]
+
+        animal_id = int(self.inputs["Animal *"].get().split(" ")[0][1:])
+        user_id = int(self.inputs["Usuário *"].get().split(" ")[0][1:])
+        a = session.get(Animal, animal_id)
+        u = session.get(User, user_id)
 
         if self.selected_id:
-            ad = session.get(AdoptionProcess, self.selected_id)
+            p = session.get(AdoptionProcess,self.selected_id)
         else:
-            ad = AdoptionProcess()
-            session.add(ad)
+            p = AdoptionProcess()
+            session.add(p)
 
-        ad.animal_id = animal.id
-        ad.user_id = user.id
-        ad.status = self.cb_status.get() or "questionnaire"
-        ad.questionnaire_score = parse_int(self.e_score.get() or "0", 0) if self.e_score.get().strip() else None
-        ad.virtual_visit_at = parse_dt_str(self.e_vvisit.get().strip())
-        ad.in_person_visit_at = parse_dt_str(self.e_pvisit.get().strip())
-        ad.docs_submitted = (self.cb_docs.get() == "Sim")
-        bg = self.cb_bg.get()
-        ad.background_check_ok = True if bg == "Sim" else False if bg == "Não" else None
-        ad.notes = self.e_notes.get().strip() or None
+        p.animal = a
+        p.user = u
+        p.status = self.inputs["Status"].get()
+        p.notes = self.e_notes.get("1.0", tk.END).strip()
 
-        # Regras simples para atualizar status do animal / métricas abrigo
-        animal_obj = session.get(Animal, ad.animal_id)
-        if ad.status in ("screening", "visit", "docs", "approved"):
-            animal_obj.status = "in_process"
-        elif ad.status == "finalized":
-            animal_obj.status = "adopted"
-            s = session.query(Shelter).first()
-            if s:
-                s.adopted_count = (s.adopted_count or 0) + 1
+        # Função auxiliar para converter string em date
+        def parse_date(s):
+            s = s.strip()
+            if not s:
+                return None
+            try:
+                return datetime.strptime(s, "%d/%m/%Y").date()
+            except ValueError:
+                messagebox.showerror("Erro", f"Data inválida: {s}. Use DD/MM/AAAA")
+                raise
+
+        p.virtual_visit_at = parse_date(self.inputs["Visita Virtual (DD/MM/AAAA)"].get())
+        p.in_person_visit_at = parse_date(self.inputs["Visita Presencial (DD/MM/AAAA)"].get())
+        p.docs_submitted = parse_date(self.inputs["Data Adoção (DD/MM/AAAA)"].get())
 
         session.commit()
         self.load()
-        self.info("Processo de adoção salvo com sucesso.")
+        messagebox.showinfo("Sucesso","Processo salvo com sucesso.")
 
     def delete(self):
         if not self.selected_id:
-            self.error("Selecione um registro.")
+            messagebox.showerror("Erro","Selecione um processo")
             return
-        if not messagebox.askyesno("Confirmar", "Excluir processo de adoção selecionado?"):
+        if not messagebox.askyesno("Confirmar","Excluir processo selecionado?"):
             return
-        ad = session.get(AdoptionProcess, self.selected_id)
-        session.delete(ad)
+        p = session.get(AdoptionProcess,self.selected_id)
+        session.delete(p)
         session.commit()
         self.new()
         self.load()
-        self.info("Processo de adoção excluído com sucesso.")
+        messagebox.showinfo("Sucesso","Processo excluído com sucesso.")

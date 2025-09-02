@@ -1,7 +1,8 @@
-# models.py
+#models
 from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime, Date, ForeignKey, Table
 from sqlalchemy.orm import relationship, declarative_base
 import json
+import bcrypt
 
 Base = declarative_base()
 
@@ -11,6 +12,7 @@ user_favorites = Table(
     Column("user_id", Integer, ForeignKey("users.id"), primary_key=True),
     Column("animal_id", Integer, ForeignKey("animals.id"), primary_key=True),
 )
+
 
 class Animal(Base):
     __tablename__ = "animals"
@@ -39,6 +41,7 @@ class Animal(Base):
         except Exception:
             return []
 
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
@@ -53,6 +56,7 @@ class User(Base):
     adoptions = relationship("AdoptionProcess", back_populates="user", lazy="selectin")
     fosters = relationship("Foster", back_populates="user", lazy="selectin")
 
+
 class Shelter(Base):
     __tablename__ = "shelter"
     id = Column(Integer, primary_key=True)
@@ -63,6 +67,7 @@ class Shelter(Base):
     authenticity_verified = Column(Boolean, default=False)
     rescued_count = Column(Integer, default=0)
     adopted_count = Column(Integer, default=0)
+
 
 class AdoptionProcess(Base):
     __tablename__ = "adoptions"
@@ -80,6 +85,7 @@ class AdoptionProcess(Base):
     animal = relationship("Animal", back_populates="adoptions")
     user = relationship("User", back_populates="adoptions")
 
+
 class Foster(Base):
     __tablename__ = "fosters"
     id = Column(Integer, primary_key=True)
@@ -92,3 +98,24 @@ class Foster(Base):
 
     animal = relationship("Animal", back_populates="fosters")
     user = relationship("User", back_populates="fosters")
+
+
+# 🔐 Novo modelo para login seguro
+class AuthUser(Base):
+    __tablename__ = "auth_users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+
+    def set_password(self, password: str):
+        self.password_hash = bcrypt.hashpw(
+            password.encode("utf-8"),
+            bcrypt.gensalt()
+        ).decode("utf-8")
+
+    def check_password(self, password: str) -> bool:
+        return bcrypt.checkpw(
+            password.encode("utf-8"),
+            self.password_hash.encode("utf-8")
+        )
