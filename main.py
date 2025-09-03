@@ -13,6 +13,7 @@ from adoptions_tab import AdoptionsTab
 from users_tab import UsersTab
 from shelter_tab import ShelterTab
 from search_tab import SearchTab
+from adm_tab import AdmTab
 from database import init_db
 from login import login_screen
 
@@ -24,31 +25,40 @@ class MainApp(tk.Tk):
     - Inicializar a interface gráfica
     - Criar o notebook com todas as abas
     - Gerenciar o tema visual
+    - Controlar acesso baseado no nível do usuário
     """
     
-    def __init__(self):
+    def __init__(self, usuario_logado=None):
         """Inicializa a aplicação principal."""
         super().__init__()
         self.title("Animal Adoption Platform")
         self.geometry("1600x900")
         sv_ttk.set_theme("light")
+        
+        self.usuario_logado = usuario_logado
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(expand=True, fill="both")
 
-        notebook = ttk.Notebook(self)
-        notebook.pack(expand=True, fill="both")
-
-        notebook.add(AnimalsTab(notebook), text="Animals")
-        notebook.add(AdoptionsTab(notebook), text="Adoptions")
-        notebook.add(UsersTab(notebook), text="Users")
-        notebook.add(ShelterTab(notebook), text="Shelter")
-        notebook.add(SearchTab(notebook), text="Search")
+        # Adiciona abas padrão (disponíveis para todos os usuários)
+        self.notebook.add(AnimalsTab(self.notebook), text="Animais")
+        self.notebook.add(AdoptionsTab(self.notebook), text="Adoções")
+        self.notebook.add(UsersTab(self.notebook), text="Usuários")
+        self.notebook.add(ShelterTab(self.notebook), text="Abrigos")
+        self.notebook.add(SearchTab(self.notebook), text="Pesquisa")
+        
+        # Adiciona aba ADM apenas se usuário for admin
+        if usuario_logado and usuario_logado.is_admin():
+            self.notebook.add(AdmTab(self.notebook, usuario_logado), text="ADM")
+        
+        # Exibe nome do usuário logado no título
+        if usuario_logado:
+            self.title(f"Sistema de Abrigo Animal - Usuário: {usuario_logado.username}")
 
 if __name__ == "__main__":
-    # Inicializa o banco de dados
     init_db()
-    
-    # Exibe tela de login e inicia aplicação se autenticação for bem-sucedida
-    if login_screen():
-        app = MainApp()
+    usuario = login_screen()
+    if usuario:
+        app = MainApp(usuario)
         app.mainloop()
     else:
         print("Login falhou. Encerrando aplicação.")

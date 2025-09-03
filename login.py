@@ -16,7 +16,7 @@ def login_screen():
     Exibe a tela de login para autenticação de usuários.
     
     Returns:
-        bool: True se autenticação for bem-sucedida, False caso contrário
+        AuthUser: Objeto do usuário autenticado ou None se falhar
     """
     root = tk.Tk()
     root.title("Login - Animal Adoption")
@@ -42,7 +42,7 @@ def login_screen():
     password_entry = ttk.Entry(container, show="*", width=30)
     password_entry.grid(row=3, column=0, sticky="ew", pady=(0, 10))
 
-    result = {"authenticated": False}
+    result = {"usuario": None}
 
     def authenticate():
         """
@@ -59,7 +59,7 @@ def login_screen():
 
         user = session.query(AuthUser).filter_by(username=username).first()
         if user and user.check_password(password):
-            result["authenticated"] = True
+            result["usuario"] = user  # Retorna o objeto usuário
             root.destroy()
         else:
             messagebox.showerror("Erro", "Usuário ou senha inválidos!")
@@ -75,4 +75,4 @@ def login_screen():
     root.bind('<Return>', lambda event: authenticate())
 
     root.mainloop()
-    return result["authenticated"]
+    return result["usuario"]

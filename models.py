@@ -39,13 +39,13 @@ class Animal(Base):
         status (str): Status de adoção (Disponível, Em processo, Adotado, Indisponível)
         location (str): Localização física do animal
         photo_urls_json (str): URLs das fotos em formato JSON
-        shelter_id (int): ID do abrigo onde o animal está alocado (NOVO CAMPO)
+        shelter_id (int): ID do abrigo onde o animal está alocado
         
     Relacionamentos:
         adoptions: Processos de adoção vinculados a este animal
         fosters: Lar temporário vinculado a este animal
         liked_by: Usuários que favoritaram este animal
-        shelter: Abrigo onde o animal está alocado (NOVO RELACIONAMENTO)
+        shelter: Abrigo onde o animal está alocado
     """
     __tablename__ = "animals"
     
@@ -63,13 +63,13 @@ class Animal(Base):
     status = Column(String(20), default="available")
     location = Column(String(120))
     photo_urls_json = Column(Text, default="[]")
-    shelter_id = Column(Integer, ForeignKey("shelter.id"), nullable=True)  # NOVO CAMPO
+    shelter_id = Column(Integer, ForeignKey("shelter.id"), nullable=True)
 
     # Relacionamentos
     adoptions = relationship("AdoptionProcess", back_populates="animal", lazy="selectin")
     fosters = relationship("Foster", back_populates="animal", lazy="selectin")
     liked_by = relationship("User", secondary=user_favorites, back_populates="favorites", lazy="selectin")
-    shelter = relationship("Shelter", backref="animals")  # NOVO RELACIONAMENTO
+    shelter = relationship("Shelter", backref="animals")
 
     def photos(self):
         """Retorna a lista de URLs de fotos do animal."""
@@ -83,18 +83,18 @@ class User(Base):
     Modelo que representa um usuário do sistema.
     
     Atributos:
-        id (int): Identificador único do usuário
-        name (str): Nome do usuário (obrigatório)
-        email (str): Email do usuário (obrigatório e único)
-        phone (str): Telefone do usuário
-        city (str): Cidade do usuário
-        adoption_preferences (str): Preferências de adoção do usuário
-        approved (bool): Se o usuário está aprovado para adoção
+        id (int): Identificador único do usuario
+        name (str): Nome do usuario (obrigatório)
+        email (str): Email do usuario (obrigatório e único)
+        phone (str): Telefone do usuario
+        city (str): Cidade do usuario
+        adoption_preferences (str): Preferências de adoção do usuario
+        approved (bool): Se o usuario está aprovado para adoção
         
     Relacionamentos:
-        favorites: Animais favoritados pelo usuário
-        adoptions: Processos de adoção do usuário
-        fosters: Lar temporário do usuário
+        favorites: Animais favoritados pelo usuario
+        adoptions: Processos de adoção do usuario
+        fosters: Lar temporário do usuario
     """
     __tablename__ = "users"
     
@@ -122,11 +122,9 @@ class Shelter(Base):
         phone (str): Telefone de contato do abrigo
         address (str): Endereço físico do abrigo
         location (str): Localização/região do abrigo
-        capacity (int): Capacidade máxima de animais do abrigo (NOVO CAMPO)
+        capacity (int): Capacidade máxima de animais do abrigo
         rescued_count (int): Contador de animais resgatados
         adopted_count (int): Contador de animais adotados
-        
-    REMOVIDO: authenticity_verified (bool) - Campo removido conforme solicitação
     """
     __tablename__ = "shelter"
     
@@ -135,7 +133,8 @@ class Shelter(Base):
     email = Column(String(120))
     phone = Column(String(60))
     address = Column(String(200))
-    capacity = Column(Integer, default=0)  # NOVO CAMPO (substitui authenticity_verified)
+    location = Column(String(120))
+    capacity = Column(Integer, default=0)
     rescued_count = Column(Integer, default=0)
     adopted_count = Column(Integer, default=0)
 
@@ -146,18 +145,18 @@ class AdoptionProcess(Base):
     Atributos:
         id (int): Identificador único do processo
         animal_id (int): ID do animal sendo adotado (chave estrangeira)
-        user_id (int): ID do usuário adotante (chave estrangeira)
+        user_id (int): ID do usuario adotante (chave estrangeira)
         status (str): Status do processo (Questionário, Triagem, Visita, Documentos, Aprovado, Finalizado, Recusado)
         questionnaire_score (int): Pontuação do questionário de adoção
-        virtual_visit_at (DateTime): Data e hora da visita virtual (NOVO CAMPO)
-        in_person_visit_at (DateTime): Data e hora da visita presencial (NOVO CAMPO)
+        virtual_visit_at (DateTime): Data e hora da visita virtual
+        in_person_visit_at (DateTime): Data e hora da visita presencial
         docs_submitted (bool): Se os documentos foram submetidos
         background_check_ok (bool): Se a verificação de antecedentes está OK
         notes (str): Observações sobre o processo
         
     Relacionamentos:
         animal: Animal sendo adotado
-        user: Usuário adotante
+        user: Usuario adotante
     """
     __tablename__ = "adoptions"
     
@@ -166,12 +165,16 @@ class AdoptionProcess(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(String(30), default="questionnaire")
     questionnaire_score = Column(Integer)
-    virtual_visit_at = Column(DateTime)  # NOVO CAMPO
-    in_person_visit_at = Column(DateTime)  # NOVO CAMPO
+    virtual_visit_at = Column(DateTime)
+    in_person_visit_at = Column(DateTime)
     docs_submitted = Column(Boolean, default=False)
     background_check_ok = Column(Boolean)
     notes = Column(Text)
-    
+
+    # Relacionamentos
+    animal = relationship("Animal", back_populates="adoptions")
+    user = relationship("User", back_populates="adoptions")
+
     def update_animal_status(self):
         """Atualiza o status do animal baseado no status da adoção"""
         if self.animal:
@@ -181,10 +184,6 @@ class AdoptionProcess(Base):
                 self.animal.status = "Em processo"
             # Mantém o status atual para "Recusado" ou outros status
 
-    # Relacionamentos
-    animal = relationship("Animal", back_populates="adoptions")
-    user = relationship("User", back_populates="adoptions")
-
 class Foster(Base):
     """
     Modelo que representa um lar temporário (foster).
@@ -192,7 +191,7 @@ class Foster(Base):
     Atributos:
         id (int): Identificador único do foster
         animal_id (int): ID do animal em lar temporário (chave estrangeira)
-        user_id (int): ID do usuário que fornece o lar temporário (chave estrangeira)
+        user_id (int): ID do usuario que fornece o lar temporário (chave estrangeira)
         start_date (Date): Data de início do lar temporário
         end_date (Date): Data de término do lar temporário
         active (bool): Se o lar temporário está ativo
@@ -200,7 +199,7 @@ class Foster(Base):
         
     Relacionamentos:
         animal: Animal em lar temporário
-        user: Usuário que fornece o lar temporário
+        user: Usuario que fornece o lar temporário
     """
     __tablename__ = "fosters"
     
@@ -218,23 +217,29 @@ class Foster(Base):
 
 class AuthUser(Base):
     """
-    Modelo que representa um usuário de autenticação do sistema.
+    Modelo que representa um usuario de autenticação do sistema.
     
     Atributos:
-        id (int): Identificador único do usuário
-        username (str): Nome de usuário (obrigatório e único)
-        password_hash (str): Hash da senha do usuário (obrigatório)
+        id (int): Identificador único do usuario
+        username (str): Nome de usuario (obrigatório e único)
+        password_hash (str): Hash da senha do usuario (obrigatório)
+        nivel_acesso (str): Nível de acesso do usuario (admin, gestor, usuario)
     """
     __tablename__ = "auth_users"
     
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
+    nivel_acesso = Column(String(20), default="usuario")
 
     def set_password(self, password: str):
-        """Define a senha do usuário com hash bcrypt."""
+        """Define a senha do usuario com hash bcrypt."""
         self.password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
     def check_password(self, password: str) -> bool:
         """Verifica se a senha fornecida corresponde ao hash armazenado."""
         return bcrypt.checkpw(password.encode("utf-8"), self.password_hash.encode("utf-8"))
+    
+    def is_admin(self) -> bool:
+        """Verifica se o usuario tem permissão de administrador."""
+        return self.nivel_acesso == "admin"

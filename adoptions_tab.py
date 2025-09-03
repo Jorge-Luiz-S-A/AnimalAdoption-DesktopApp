@@ -206,11 +206,7 @@ class AdoptionsTab(ttk.Frame):
                 w.delete(0, tk.END)
 
     def save(self):
-        """
-        Salva ou atualiza um processo de adoção.
-        
-        Valida o formato das datas de visita antes de salvar.
-        """
+        """Salva ou atualiza adoção."""
         animal_val = self.inputs["Animal *"].get().strip()
         user_val = self.inputs["Usuário *"].get().strip()
 
@@ -231,10 +227,9 @@ class AdoptionsTab(ttk.Frame):
         ad.user_id = user_id
         ad.status = self.inputs["Status"].get().strip() or None
         ad.notes = self.inputs["Notas"].get("1.0", tk.END).strip() or None
-        
-        # NOVOS CAMPOS - Datas de visita (com validação)
+
+        # Processar datas de visita
         from datetime import datetime
-        
         visita_online = self.inputs["Visita Online"].get().strip()
         visita_presencial = self.inputs["Visita Presencial"].get().strip()
         
@@ -257,18 +252,19 @@ class AdoptionsTab(ttk.Frame):
         
         # ATUALIZAR STATUS DO ANIMAL AUTOMATICAMENTE
         ad.update_animal_status()
-        
         session.commit()
+        
         self.load()
-        messagebox.showinfo("Sucesso", "Adoção salva com sucesso.")
+        messagebox.showinfo("Sucesso", "Adoção salva com sucesso. Status do animal atualizado automaticamente.")
 
     def delete(self):
-        """Exclui o processo de adoção selecionado após confirmação."""
+        """Exclui a adoção selecionada."""
         if not self.selected_id:
             messagebox.showerror("Erro", "Selecione uma adoção.")
             return
         if not messagebox.askyesno("Confirmar", "Excluir adoção selecionada?"):
             return
+            
         ad = session.get(AdoptionProcess, self.selected_id)
         
         # Restaurar status do animal para "Disponível" antes de excluir
@@ -279,4 +275,4 @@ class AdoptionsTab(ttk.Frame):
         session.commit()
         self.new()
         self.load()
-        messagebox.showinfo("Sucesso", "Adoção excluída com sucesso.")
+        messagebox.showinfo("Sucesso", "Adoção excluída com sucesso. Status do animal restaurado para Disponível.")
