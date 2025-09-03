@@ -171,6 +171,15 @@ class AdoptionProcess(Base):
     docs_submitted = Column(Boolean, default=False)
     background_check_ok = Column(Boolean)
     notes = Column(Text)
+    
+    def update_animal_status(self):
+        """Atualiza o status do animal baseado no status da adoção"""
+        if self.animal:
+            if self.status == "Finalizado":
+                self.animal.status = "Adotado"
+            elif self.status in ["Questionário", "Triagem", "Visita", "Documentos", "Aprovado"]:
+                self.animal.status = "Em processo"
+            # Mantém o status atual para "Recusado" ou outros status
 
     # Relacionamentos
     animal = relationship("Animal", back_populates="adoptions")

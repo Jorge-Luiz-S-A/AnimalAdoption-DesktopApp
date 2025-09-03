@@ -252,6 +252,12 @@ class AdoptionsTab(ttk.Frame):
             messagebox.showerror("Erro", "Formato de data inválido. Use DD/MM/AAAA.")
             return
 
+        # Salvar adoção primeiro
+        session.commit()
+        
+        # ATUALIZAR STATUS DO ANIMAL AUTOMATICAMENTE
+        ad.update_animal_status()
+        
         session.commit()
         self.load()
         messagebox.showinfo("Sucesso", "Adoção salva com sucesso.")
@@ -264,6 +270,11 @@ class AdoptionsTab(ttk.Frame):
         if not messagebox.askyesno("Confirmar", "Excluir adoção selecionada?"):
             return
         ad = session.get(AdoptionProcess, self.selected_id)
+        
+        # Restaurar status do animal para "Disponível" antes de excluir
+        if ad.animal:
+            ad.animal.status = "Disponível"
+        
         session.delete(ad)
         session.commit()
         self.new()
