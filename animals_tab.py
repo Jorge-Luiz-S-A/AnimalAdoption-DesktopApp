@@ -1,6 +1,5 @@
-# animals_tab.py
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from tkcalendar import DateEntry
 from base_tab import BaseTab
 from database import session
@@ -79,7 +78,7 @@ class AnimalsTab(BaseTab):
             ("Temperamento", ttk.Entry),
             ("Histórico de saúde", ttk.Entry),
             ("Status", ttk.Combobox, {"values":["","Disponível","Em processo","Adotado","Indisponível"], "state":"readonly"}),
-            ("Local", ttk.Combobox, {"state":"readonly"}),
+            ("Abrigo", ttk.Combobox, {"state":"readonly"}),  # substitui Local
         ]
 
         self.inputs = {}
@@ -104,7 +103,6 @@ class AnimalsTab(BaseTab):
         self.load()
         self.load_shelters()
 
-        # Scroll mouse wheel
         canvas.bind_all("<MouseWheel>", self._on_mousewheel)
         self.canvas = canvas
 
@@ -113,9 +111,9 @@ class AnimalsTab(BaseTab):
 
     def load_shelters(self):
         shelters = session.query(Shelter).order_by(Shelter.name).all()
-        self.inputs["Local"]['values'] = [s.name for s in shelters]
+        self.inputs["Abrigo"]['values'] = [s.name for s in shelters]
 
-    # ---------------- Métodos CRUD ----------------
+    # ---------------- CRUD ----------------
     def load(self):
         for i in self.tree.get_children():
             self.tree.delete(i)
@@ -141,7 +139,7 @@ class AnimalsTab(BaseTab):
         self.inputs["Temperamento"].delete(0, tk.END); self.inputs["Temperamento"].insert(0, a.temperament or "")
         self.inputs["Histórico de saúde"].delete(0, tk.END); self.inputs["Histórico de saúde"].insert(0, a.health_history or "")
         self.inputs["Status"].set(a.status or "")
-        self.inputs["Local"].set(a.location or "")
+        self.inputs["Abrigo"].set(a.location or "")
 
     def new(self):
         self.selected_id = None
@@ -172,7 +170,15 @@ class AnimalsTab(BaseTab):
         a.temperament = self.inputs["Temperamento"].get().strip() or None
         a.health_history = self.inputs["Histórico de saúde"].get().strip() or None
         a.status = self.inputs["Status"].get() or None
-        a.location = self.inputs["Local"].get() or None
+
+        shelter_name = self.inputs["Abrigo"].get()
+        if shelter_name:
+            shelter = session.query(Shelter).filter_by(name=shelter_name).first()
+            if shelter:
+                a.location = shelter.name
+                # Incrementa resgatados se for novo animal
+                if not self.selected_id:
+                    shelter.rescued_count = (shelter.rescued_count or 0) + 1
 
         session.commit()
         self.load()

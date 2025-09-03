@@ -2,8 +2,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database import session
-from models import Shelter
-from utils import parse_int
+from models import Shelter, Animal, AdoptionProcess
 
 class ShelterTab(ttk.Frame):
     def __init__(self, parent):
@@ -25,9 +24,13 @@ class ShelterTab(ttk.Frame):
         scrollbar = ttk.Scrollbar(table_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.tree = ttk.Treeview(table_frame,
-                                 columns=("ID","Nome","Email","Telefone","Endereço","Autenticidade","Resgatados","Adotados"),
-                                 show="headings", yscrollcommand=scrollbar.set, height=20)
+        self.tree = ttk.Treeview(
+            table_frame,
+            columns=("ID","Nome","Email","Telefone","Endereço","Autenticidade","Resgatados","Adotados"),
+            show="headings",
+            yscrollcommand=scrollbar.set,
+            height=20
+        )
         scrollbar.config(command=self.tree.yview)
 
         for c,w in (("ID",40),("Nome",150),("Email",180),("Telefone",100),("Endereço",150),
@@ -61,7 +64,7 @@ class ShelterTab(ttk.Frame):
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar_form.pack(side="right", fill="y")
 
-        # Campos do formulário (Label acima do input)
+        # Campos do formulário (Label acima do input) — sem Resgatados e Adotados
         r = 0
         fields = [
             ("Nome", ttk.Entry, {"width":30}),
@@ -69,8 +72,6 @@ class ShelterTab(ttk.Frame):
             ("Telefone", ttk.Entry, {"width":30}),
             ("Endereço", ttk.Entry, {"width":30}),
             ("Autenticidade", ttk.Combobox, {"values":["","Sim","Não"], "state":"readonly", "width":30}),
-            ("Resgatados", ttk.Entry, {"width":30}),
-            ("Adotados", ttk.Entry, {"width":30}),
         ]
 
         self.inputs = {}
@@ -95,13 +96,37 @@ class ShelterTab(ttk.Frame):
 
     # ---------------- Funções ----------------
     def load(self):
+        # Limpa tabela
         for i in self.tree.get_children():
             self.tree.delete(i)
-        for s in session.query(Shelter).order_by(Shelter.id.desc()).all():
-            self.tree.insert("", "end", iid=str(s.id),
-                             values=(s.id,s.name or "",s.email or "",s.phone or "",s.address or "",
-                                     "Sim" if s.authenticity_verified else "Não",
-                                     s.rescued_count or 0, s.adopted_count or 0))
+
+        shelters = session.query(Shelter).order_by(Shelter.id.desc()).all()
+        for s in shelters:
+            # Contar animais resgatados no abrigo
+            rescued_count = session.query(Animal).filter(Animal.location==s.name).count()
+            # Contar animais adotados do abrigo
+            adopted_count = (
+                session.query(Animal)
+                .join(Animal.adoptions)
+                .filter(Animal.location==s.name, AdoptionProcess.status=="Finalizado")
+                .count()
+            )
+
+            self.tree.insert(
+                "",
+                "end",
+                iid=str(s.id),
+                values=(
+                    s.id,
+                    s.name or "",
+                    s.email or "",
+                    s.phone or "",
+                    s.address or "",
+                    "Sim" if s.authenticity_verified else "Não",
+                    rescued_count,
+                    adopted_count
+                )
+            )
 
     def on_select(self,_):
         sel = self.tree.selection()
@@ -114,8 +139,6 @@ class ShelterTab(ttk.Frame):
         self.inputs["Telefone"].delete(0,tk.END); self.inputs["Telefone"].insert(0,s.phone or "")
         self.inputs["Endereço"].delete(0,tk.END); self.inputs["Endereço"].insert(0,s.address or "")
         self.inputs["Autenticidade"].set("Sim" if s.authenticity_verified else "Não")
-        self.inputs["Resgatados"].delete(0,tk.END); self.inputs["Resgatados"].insert(0,str(s.rescued_count or 0))
-        self.inputs["Adotados"].delete(0,tk.END); self.inputs["Adotados"].insert(0,str(s.adopted_count or 0))
 
     def new(self):
         self.selected_id = None
@@ -137,8 +160,6 @@ class ShelterTab(ttk.Frame):
         s.phone = self.inputs["Telefone"].get().strip() or None
         s.address = self.inputs["Endereço"].get().strip() or None
         s.authenticity_verified = (self.inputs["Autenticidade"].get()=="Sim")
-        s.rescued_count = parse_int(self.inputs["Resgatados"].get() or "0",0)
-        s.adopted_count = parse_int(self.inputs["Adotados"].get() or "0",0)
 
         session.commit()
         self.load()
