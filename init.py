@@ -1,6 +1,8 @@
-# init.py
 """
-Abrigo Animal - Sistema de Gerenciamento
+Pacote Principal - Sistema de Gerenciamento de Abrigo Animal
+------------------------------------------------------------
+Módulo principal que exporta todos os componentes do sistema.
+Versão 1.1.0 com todas as funcionalidades implementadas.
 """
 
 from .models import Animal, User, Shelter, AdoptionProcess, Foster
@@ -17,7 +19,7 @@ from .users_tab import UsersTab
 from .shelter_tab import ShelterTab
 from .search_tab import SearchTab
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __author__ = "Sistema de Gerenciamento de Abrigo Animal"
 __description__ = "Sistema completo para gerenciamento de abrigo animal com CRUD de animais, usuários, processos de adoção e mais"
 
@@ -32,16 +34,24 @@ __all__ = [
 ]
 
 def init_system():
+    """
+    Inicializa o sistema criando tabelas e dados padrão.
+    
+    Cria:
+    - Todas as tabelas do banco de dados
+    - Abrigo padrão se não existir
+    """
     from .database import Base
     Base.metadata.create_all(engine)
 
     from .models import Shelter
     if not session.query(Shelter).first():
-        default_shelter = Shelter(name="Meu Abrigo")
+        default_shelter = Shelter(name="Meu Abrigo", location="", capacity=50)  # Capacidade padrão
         session.add(default_shelter)
         session.commit()
         print("Abrigo padrão criado com sucesso!")
 
     print(f"Sistema de Gerenciamento de Abrigo Animal v{__version__} inicializado!")
 
+# Inicializa o sistema automaticamente ao importar o pacote
 init_system()

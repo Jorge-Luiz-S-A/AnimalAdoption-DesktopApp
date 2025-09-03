@@ -1,4 +1,9 @@
-# main.py
+"""
+Aplicação Principal - Sistema de Gerenciamento de Abrigo Animal
+---------------------------------------------------------------
+Interface principal do sistema com abas para todas as funcionalidades.
+"""
+
 import tkinter as tk
 from tkinter import ttk
 import sv_ttk
@@ -12,7 +17,17 @@ from database import init_db
 from login import login_screen
 
 class MainApp(tk.Tk):
+    """
+    Classe principal da aplicação.
+    
+    Responsável por:
+    - Inicializar a interface gráfica
+    - Criar o notebook com todas as abas
+    - Gerenciar o tema visual
+    """
+    
     def __init__(self):
+        """Inicializa a aplicação principal."""
         super().__init__()
         self.title("Animal Adoption Platform")
         self.geometry("1600x900")
@@ -28,7 +43,10 @@ class MainApp(tk.Tk):
         notebook.add(SearchTab(notebook), text="Search")
 
 if __name__ == "__main__":
+    # Inicializa o banco de dados
     init_db()
+    
+    # Exibe tela de login e inicia aplicação se autenticação for bem-sucedida
     if login_screen():
         app = MainApp()
         app.mainloop()

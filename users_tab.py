@@ -1,11 +1,31 @@
-# users_tab.py
+"""
+Aba de Usuários - CRUD completo
+-------------------------------
+Gerencia todos os usuários do sistema com formulário completo.
+"""
+
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database import session
 from models import User
 
 class UsersTab(ttk.Frame):
+    """
+    Aba para gerenciamento de usuários.
+    
+    Funcionalidades:
+    - Listar todos os usuários
+    - Criar, editar e excluir usuários
+    - Gerenciar aprovação de usuários para adoção
+    """
+    
     def __init__(self, parent):
+        """
+        Inicializa a aba de usuários.
+        
+        Args:
+            parent: Widget pai onde a aba será inserida
+        """
         super().__init__(parent)
         self.pack(fill=tk.BOTH, expand=True)
 
@@ -91,41 +111,60 @@ class UsersTab(ttk.Frame):
 
     # ---------------- Funções ----------------
     def load(self):
+        """Carrega todos os usuários na lista."""
         for i in self.tree.get_children():
             self.tree.delete(i)
         for u in session.query(User).order_by(User.id.desc()).all():
             self.tree.insert("", "end", iid=str(u.id),
                              values=(u.id, u.name, u.email, u.city or "", "Sim" if u.approved else "Não"))
 
-    def on_select(self,_):
+    def on_select(self, event):
+        """
+        Manipula a seleção de um usuário na lista.
+        
+        Args:
+            event: Evento de seleção da Treeview
+        """
         sel = self.tree.selection()
-        if not sel: return
-        u = session.get(User,int(sel[0]))
+        if not sel: 
+            return
+            
+        u = session.get(User, int(sel[0]))
         self.selected_id = u.id
 
-        self.inputs["Nome *"].delete(0,tk.END); self.inputs["Nome *"].insert(0,u.name or "")
-        self.inputs["Email *"].delete(0,tk.END); self.inputs["Email *"].insert(0,u.email or "")
-        self.inputs["Telefone"].delete(0,tk.END); self.inputs["Telefone"].insert(0,u.phone or "")
-        self.inputs["Cidade"].delete(0,tk.END); self.inputs["Cidade"].insert(0,u.city or "")
+        self.inputs["Nome *"].delete(0, tk.END)
+        self.inputs["Nome *"].insert(0, u.name or "")
+        self.inputs["Email *"].delete(0, tk.END)
+        self.inputs["Email *"].insert(0, u.email or "")
+        self.inputs["Telefone"].delete(0, tk.END)
+        self.inputs["Telefone"].insert(0, u.phone or "")
+        self.inputs["Cidade"].delete(0, tk.END)
+        self.inputs["Cidade"].insert(0, u.city or "")
         self.inputs["Aprovado"].set("Sim" if u.approved else "Não")
 
     def new(self):
+        """Limpa o formulário para criar um novo usuário."""
         self.selected_id = None
         for key, w in self.inputs.items():
             if isinstance(w, ttk.Combobox):
                 w.set("")
             else:
-                w.delete(0,tk.END)
+                w.delete(0, tk.END)
 
     def save(self):
+        """
+        Salva ou atualiza um usuário.
+        
+        Valida se nome e email foram preenchidos.
+        """
         name = self.inputs["Nome *"].get().strip()
         email = self.inputs["Email *"].get().strip()
         if not name or not email:
-            messagebox.showerror("Erro","Nome e Email são obrigatórios.")
+            messagebox.showerror("Erro", "Nome e Email são obrigatórios.")
             return
 
         if self.selected_id:
-            u = session.get(User,self.selected_id)
+            u = session.get(User, self.selected_id)
         else:
             u = User()
             session.add(u)
@@ -134,21 +173,22 @@ class UsersTab(ttk.Frame):
         u.email = email
         u.phone = self.inputs["Telefone"].get().strip() or None
         u.city = self.inputs["Cidade"].get().strip() or None
-        u.approved = (self.inputs["Aprovado"].get()=="Sim")
+        u.approved = (self.inputs["Aprovado"].get() == "Sim")
 
         session.commit()
         self.load()
-        messagebox.showinfo("Sucesso","Usuário salvo com sucesso.")
+        messagebox.showinfo("Sucesso", "Usuário salvo com sucesso.")
 
     def delete(self):
+        """Exclui o usuário selecionado após confirmação."""
         if not self.selected_id:
-            messagebox.showerror("Erro","Selecione um usuário.")
+            messagebox.showerror("Erro", "Selecione um usuário.")
             return
-        if not messagebox.askyesno("Confirmar","Excluir usuário selecionado?"):
+        if not messagebox.askyesno("Confirmar", "Excluir usuário selecionado?"):
             return
-        u = session.get(User,self.selected_id)
+        u = session.get(User, self.selected_id)
         session.delete(u)
         session.commit()
         self.new()
         self.load()
-        messagebox.showinfo("Sucesso","Usuário excluído com sucesso.")
+        messagebox.showinfo("Sucesso", "Usuário excluído com sucesso.")

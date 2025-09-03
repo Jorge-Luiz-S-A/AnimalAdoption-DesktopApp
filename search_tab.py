@@ -1,4 +1,9 @@
-# search_tab.py
+"""
+Aba de Pesquisa - Busca avançada
+--------------------------------
+Permite buscar animais com base em diversos critérios de filtro.
+"""
+
 import tkinter as tk
 from tkinter import ttk
 from base_tab import BaseTab
@@ -7,7 +12,22 @@ from models import Animal
 from utils import SIZES, parse_int
 
 class SearchTab(BaseTab):
+    """
+    Aba para pesquisa avançada de animais.
+    
+    Funcionalidades:
+    - Filtrar animais por espécie, porte, localização, idade
+    - Exibir resultados em tabela com scroll
+    - Limpar filtros rapidamente
+    """
+    
     def __init__(self, parent):
+        """
+        Inicializa a aba de pesquisa.
+        
+        Args:
+            parent: Widget pai onde a aba será inserida
+        """
         super().__init__(parent)
         self.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
@@ -74,6 +94,7 @@ class SearchTab(BaseTab):
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
     def clear_filters(self):
+        """Limpa todos os campos de filtro."""
         self.e_species.delete(0, tk.END)
         self.cb_size.set("")
         self.e_location.delete(0, tk.END)
@@ -83,6 +104,11 @@ class SearchTab(BaseTab):
             self.tree.delete(i)
 
     def search(self):
+        """
+        Executa a busca com base nos filtros aplicados.
+        
+        Exibe os resultados na tabela e mostra contagem de animais encontrados.
+        """
         q = session.query(Animal)
 
         species = self.e_species.get().strip()
