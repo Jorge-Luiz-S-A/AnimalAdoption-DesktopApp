@@ -32,7 +32,7 @@ class MainApp(tk.Tk):
         """Inicializa a aplicação principal."""
         super().__init__()
         self.title("Animal Adoption Platform")
-        self.geometry("1600x900")
+        self.geometry("1366x768")
         sv_ttk.set_theme("light")
         
         self.usuario_logado = usuario_logado
