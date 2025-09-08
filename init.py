@@ -2,10 +2,10 @@
 Pacote Principal - Sistema de Gerenciamento de Abrigo Animal
 ------------------------------------------------------------
 Módulo principal que exporta todos os componentes do sistema.
-Versão 1.1.0 com todas as funcionalidades implementadas.
+Versão 1.1.0 simplificada sem Foster, Favoritos e Fotos.
 """
 
-from .models import Animal, User, Shelter, AdoptionProcess, Foster
+from .models import Animal, User, Shelter, AdoptionProcess
 from .database import session, engine
 from .utils import (
     STATUSES, ADOPTION_STEPS, SIZES, GENDERS,
@@ -24,7 +24,7 @@ __author__ = "Sistema de Gerenciamento de Abrigo Animal"
 __description__ = "Sistema completo para gerenciamento de abrigo animal com CRUD de animais, usuários, processos de adoção e mais"
 
 __all__ = [
-    'Animal', 'User', 'Shelter', 'AdoptionProcess', 'Foster',
+    'Animal', 'User', 'Shelter', 'AdoptionProcess',
     'session', 'engine',
     'STATUSES', 'ADOPTION_STEPS', 'SIZES', 'GENDERS',
     'parse_bool', 'parse_int', 'parse_date_str', 'parse_dt_str',
@@ -46,7 +46,7 @@ def init_system():
 
     from .models import Shelter
     if not session.query(Shelter).first():
-        default_shelter = Shelter(name="Meu Abrigo", location="", capacity=50)  # Capacidade padrão
+        default_shelter = Shelter(name="Meu Abrigo", location="", capacity=50)
         session.add(default_shelter)
         session.commit()
         print("Abrigo padrão criado com sucesso!")

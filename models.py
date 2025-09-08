@@ -2,23 +2,15 @@
 Modelos de Dados do Sistema de Gerenciamento de Abrigo Animal
 ------------------------------------------------------------
 Define todas as tabelas do banco de dados e seus relacionamentos usando SQLAlchemy ORM.
+Versão simplificada sem Foster, Favoritos e Fotos.
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime, Date, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime, Date, ForeignKey
 from sqlalchemy.orm import relationship, declarative_base
-import json
 import bcrypt
 
 # Base para todos os modelos
 Base = declarative_base()
-
-# Tabela de associação para favoritos (relação muitos-para-muitos)
-user_favorites = Table(
-    "user_favorites", 
-    Base.metadata,
-    Column("user_id", Integer, ForeignKey("users.id"), primary_key=True),
-    Column("animal_id", Integer, ForeignKey("animals.id"), primary_key=True),
-)
 
 class Animal(Base):
     """
@@ -38,13 +30,10 @@ class Animal(Base):
         health_history (str): Histórico de saúde do animal
         status (str): Status de adoção (Disponível, Em processo, Adotado, Indisponível)
         location (str): Localização física do animal
-        photo_urls_json (str): URLs das fotos em formato JSON
         shelter_id (int): ID do abrigo onde o animal está alocado
         
     Relacionamentos:
         adoptions: Processos de adoção vinculados a este animal
-        fosters: Lar temporário vinculado a este animal
-        liked_by: Usuários que favoritaram este animal
         shelter: Abrigo onde o animal está alocado
     """
     __tablename__ = "animals"
@@ -62,21 +51,11 @@ class Animal(Base):
     health_history = Column(Text)
     status = Column(String(20), default="available")
     location = Column(String(120))
-    photo_urls_json = Column(Text, default="[]")
     shelter_id = Column(Integer, ForeignKey("shelter.id"), nullable=True)
 
     # Relacionamentos
     adoptions = relationship("AdoptionProcess", back_populates="animal", lazy="selectin")
-    fosters = relationship("Foster", back_populates="animal", lazy="selectin")
-    liked_by = relationship("User", secondary=user_favorites, back_populates="favorites", lazy="selectin")
     shelter = relationship("Shelter", backref="animals")
-
-    def photos(self):
-        """Retorna a lista de URLs de fotos do animal."""
-        try:
-            return json.loads(self.photo_urls_json or "[]")
-        except Exception:
-            return []
 
 class User(Base):
     """
@@ -88,13 +67,11 @@ class User(Base):
         email (str): Email do usuario (obrigatório e único)
         phone (str): Telefone do usuario
         city (str): Cidade do usuario
-        adoption_preferences (str): Preferências de adoção do usuario
+        adoption_preferences (str): Preferências de adoção do usuario (usado como observações)
         approved (bool): Se o usuario está aprovado para adoção
         
     Relacionamentos:
-        favorites: Animais favoritados pelo usuario
         adoptions: Processos de adoção do usuario
-        fosters: Lar temporário do usuario
     """
     __tablename__ = "users"
     
@@ -103,13 +80,11 @@ class User(Base):
     email = Column(String(120), unique=True, nullable=False)
     phone = Column(String(60))
     city = Column(String(120))
-    adoption_preferences = Column(Text)
+    adoption_preferences = Column(Text)  # Usado como campo de observações
     approved = Column(Boolean, default=False)
 
     # Relacionamentos
-    favorites = relationship("Animal", secondary=user_favorites, back_populates="liked_by", lazy="selectin")
     adoptions = relationship("AdoptionProcess", back_populates="user", lazy="selectin")
-    fosters = relationship("Foster", back_populates="user", lazy="selectin")
 
 class Shelter(Base):
     """
@@ -182,38 +157,6 @@ class AdoptionProcess(Base):
                 self.animal.status = "Adotado"
             elif self.status in ["Questionário", "Triagem", "Visita", "Documentos", "Aprovado"]:
                 self.animal.status = "Em processo"
-            # Mantém o status atual para "Recusado" ou outros status
-
-class Foster(Base):
-    """
-    Modelo que representa um lar temporário (foster).
-    
-    Atributos:
-        id (int): Identificador único do foster
-        animal_id (int): ID do animal em lar temporário (chave estrangeira)
-        user_id (int): ID do usuario que fornece o lar temporário (chave estrangeira)
-        start_date (Date): Data de início do lar temporário
-        end_date (Date): Data de término do lar temporário
-        active (bool): Se o lar temporário está ativo
-        notes (str): Observações sobre o lar temporário
-        
-    Relacionamentos:
-        animal: Animal em lar temporário
-        user: Usuario que fornece o lar temporário
-    """
-    __tablename__ = "fosters"
-    
-    id = Column(Integer, primary_key=True)
-    animal_id = Column(Integer, ForeignKey("animals.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    start_date = Column(Date)
-    end_date = Column(Date)
-    active = Column(Boolean, default=True)
-    notes = Column(Text)
-
-    # Relacionamentos
-    animal = relationship("Animal", back_populates="fosters")
-    user = relationship("User", back_populates="fosters")
 
 class AuthUser(Base):
     """

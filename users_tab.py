@@ -2,6 +2,7 @@
 Aba de Usuários - CRUD completo
 -------------------------------
 Gerencia todos os usuários do sistema com formulário completo.
+Inclui campo de observações para informações adicionais.
 """
 
 import tkinter as tk
@@ -17,6 +18,7 @@ class UsersTab(ttk.Frame):
     - Listar todos os usuários
     - Criar, editar e excluir usuários
     - Gerenciar aprovação de usuários para adoção
+    - Campo de observações para informações adicionais
     """
     
     def __init__(self, parent):
@@ -98,6 +100,13 @@ class UsersTab(ttk.Frame):
             self.inputs[label_text] = w
             r += 1
 
+        # Campo Observações (igual ao formulário de animais)
+        ttk.Label(self.scrollable_frame, text="Observações").grid(row=r, column=0, columnspan=2, sticky="w", pady=(5,0))
+        r += 1
+        self.inputs["Observações"] = tk.Text(self.scrollable_frame, height=4, width=30)
+        self.inputs["Observações"].grid(row=r, column=0, columnspan=2, sticky="we", pady=(0,5))
+        r += 1
+
         # Botões
         btn_frame = ttk.Frame(self.scrollable_frame)
         btn_frame.grid(row=r, column=0, columnspan=2, pady=10)
@@ -141,6 +150,10 @@ class UsersTab(ttk.Frame):
         self.inputs["Cidade"].delete(0, tk.END)
         self.inputs["Cidade"].insert(0, u.city or "")
         self.inputs["Aprovado"].set("Sim" if u.approved else "Não")
+        
+        # Campo Observações
+        self.inputs["Observações"].delete("1.0", tk.END)
+        self.inputs["Observações"].insert(tk.END, u.adoption_preferences or "")
 
     def new(self):
         """Limpa o formulário para criar um novo usuário."""
@@ -148,6 +161,8 @@ class UsersTab(ttk.Frame):
         for key, w in self.inputs.items():
             if isinstance(w, ttk.Combobox):
                 w.set("")
+            elif isinstance(w, tk.Text):
+                w.delete("1.0", tk.END)
             else:
                 w.delete(0, tk.END)
 
@@ -174,6 +189,7 @@ class UsersTab(ttk.Frame):
         u.phone = self.inputs["Telefone"].get().strip() or None
         u.city = self.inputs["Cidade"].get().strip() or None
         u.approved = (self.inputs["Aprovado"].get() == "Sim")
+        u.adoption_preferences = self.inputs["Observações"].get("1.0", tk.END).strip() or None
 
         session.commit()
         self.load()

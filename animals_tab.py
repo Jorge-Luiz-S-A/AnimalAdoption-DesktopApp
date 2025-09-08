@@ -3,6 +3,7 @@ Aba de Animais - CRUD completo
 ------------------------------
 Permite gerenciar todos os animais do sistema com formulário scrollável e edição de registros existentes.
 Inclui vínculo com abrigos e validação de capacidade.
+Versão simplificada sem fotos.
 """
 
 import tkinter as tk
@@ -96,7 +97,7 @@ class AnimalsTab(ttk.Frame):
             ("Gênero", ttk.Combobox, {"values":GENDERS,"state":"readonly","width":30}),
             ("Status", ttk.Combobox, {"values":["Disponível","Em processo","Adotado","Indisponível"],"state":"readonly","width":30}),
             ("Temperamento", ttk.Combobox, {"values":["Calmo","Agitado","Ativo","Estressado"],"state":"readonly","width":30}),
-            ("Abrigo", ttk.Combobox, {"values": self.get_shelters(), "state":"readonly","width":30}),  # NOVO CAMPO
+            ("Abrigo", ttk.Combobox, {"values": self.get_shelters(), "state":"readonly","width":30}),
         ]
 
         for label_text, widget_class, opts in fields:
@@ -188,7 +189,7 @@ class AnimalsTab(ttk.Frame):
         self.inputs["Status"].set(a.status or "")
         self.inputs["Temperamento"].set(a.temperament or "")
         
-        # NOVO CAMPO - Abrigo
+        # Campo Abrigo
         if a.shelter:
             self.inputs["Abrigo"].set(f"{a.shelter.id} - {a.shelter.name}")
         else:
@@ -220,7 +221,7 @@ class AnimalsTab(ttk.Frame):
             messagebox.showerror("Erro", "Nome é obrigatório.")
             return
 
-        # VALIDAÇÃO DE CAPACIDADE DO ABRIGO (NOVA FUNCIONALIDADE)
+        # VALIDAÇÃO DE CAPACIDADE DO ABRIGO
         from models import Shelter
         shelter_val = self.inputs["Abrigo"].get().strip()
         if shelter_val:
@@ -252,7 +253,7 @@ class AnimalsTab(ttk.Frame):
         a.temperament = self.inputs["Temperamento"].get()
         a.health_history = self.inputs["Observações"].get("1.0", tk.END).strip() or None
         
-        # NOVO CAMPO - Abrigo
+        # Campo Abrigo
         if shelter_val:
             a.shelter_id = shelter_id
         else:
