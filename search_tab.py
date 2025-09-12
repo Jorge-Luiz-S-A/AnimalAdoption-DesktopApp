@@ -81,13 +81,13 @@ class SearchTab(BaseTab):
 
         self.tree = ttk.Treeview(
             table_frame,
-            columns=("id","name","species","age","size","gender","status","location"),
+            columns=("ID","Nome","Espécie","Idade","Porte","Gênero","Status","Localização"),
             show="headings", height=14, yscrollcommand=scrollbar.set
         )
         scrollbar.config(command=self.tree.yview)
 
-        for c, w in (("id",60), ("name",140), ("species",100), ("age",60), ("size",80),
-                     ("gender",80), ("status",100), ("location",120)):
+        for c, w in (("ID",60), ("Nome",140), ("Espécie",100), ("Idade",60), ("Porte",80),
+                     ("Gênero",80), ("Status",100), ("Localização",120)):
             self.tree.heading(c, text=c.upper())
             self.tree.column(c, width=w, anchor=tk.W)
 
