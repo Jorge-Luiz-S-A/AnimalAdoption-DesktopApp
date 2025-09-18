@@ -111,7 +111,7 @@ class ShelterTab(ttk.Frame):
         ttk.Button(btn_frame,text="Novo",command=self.new).pack(side=tk.LEFT,padx=4)
         ttk.Button(btn_frame,text="Salvar",command=self.save).pack(side=tk.LEFT,padx=4)
         ttk.Button(btn_frame,text="Excluir",command=self.delete).pack(side=tk.LEFT,padx=4)
-        ttk.Button(btn_frame,text="Atualizar",command=self.load).pack(side=tk.LEFT,padx=4)
+        ttk.Button(btn_frame,text="Atualizar Página",command=self.load).pack(side=tk.LEFT,padx=4)
 
         self.selected_id = None
         self.load()

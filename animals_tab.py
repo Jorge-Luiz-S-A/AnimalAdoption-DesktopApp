@@ -96,7 +96,7 @@ class AnimalsTab(ttk.Frame):
             ("Porte", ttk.Combobox, {"values":SIZES,"state":"readonly","width":30}),
             ("Gênero", ttk.Combobox, {"values":GENDERS,"state":"readonly","width":30}),
             ("Status", ttk.Combobox, {"values":["Disponível","Em processo","Adotado","Indisponível"],"state":"readonly","width":30}),
-            ("Temperamento", ttk.Combobox, {"values":["Calmo","Agitado","Ativo","Estressado"],"state":"readonly","width":30}),
+            ("Temperamento", ttk.Combobox, {"values":["Calmo","Agitado","Ativo","Estressado","Brincalhão","Dócil"],"state":"readonly","width":30}),
             ("Abrigo", ttk.Combobox, {"values": self.get_shelters(), "state":"readonly","width":30}),
         ]
 
@@ -121,7 +121,7 @@ class AnimalsTab(ttk.Frame):
         ttk.Button(btn_frame,text="Novo",command=self.new).pack(side=tk.LEFT,padx=4)
         ttk.Button(btn_frame,text="Salvar",command=self.save).pack(side=tk.LEFT,padx=4)
         ttk.Button(btn_frame,text="Excluir",command=self.delete).pack(side=tk.LEFT,padx=4)
-        ttk.Button(btn_frame,text="Atualizar",command=self.load).pack(side=tk.LEFT,padx=4)
+        ttk.Button(btn_frame,text="Atualizar Página",command=self.load).pack(side=tk.LEFT,padx=4)
 
         self.selected_id = None
         self.load()

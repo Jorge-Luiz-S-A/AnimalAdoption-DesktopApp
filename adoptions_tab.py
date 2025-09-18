@@ -121,7 +121,7 @@ class AdoptionsTab(ttk.Frame):
         ttk.Button(btn_frame, text="Novo", command=self.new).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Salvar", command=self.save).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Excluir", command=self.delete).pack(side=tk.LEFT, padx=4)
-        ttk.Button(btn_frame, text="Atualizar", command=self.load).pack(side=tk.LEFT, padx=4)
+        ttk.Button(btn_frame, text="Atualizar Página", command=self.load).pack(side=tk.LEFT, padx=4)
 
         self.selected_id = None
         self.load()
@@ -132,19 +132,28 @@ class AdoptionsTab(ttk.Frame):
         Obtém a lista de animais para popular o combobox.
         
         Returns:
-            list: Lista de strings no formato "ID - Nome" para todos os animais
+            list: Lista de strings no formato "ID - Nome" para todos os animais DISPONÍVEIS
         """
-        return [f"{a.id} - {a.name}" for a in session.query(Animal).all()]
-
+        # Filtra apenas animais com status "Disponível"
+        animais_disponiveis = session.query(Animal).filter(
+            Animal.status == "Disponível"
+        ).all()
+        
+        return [f"{a.id} - {a.name}" for a in animais_disponiveis]
+    
     def get_users(self):
         """
-        Obtém a lista de usuários para popular o combobox.
+        Obtém a lista de usuários APROVADOS para popular o combobox.
         
         Returns:
-            list: Lista de strings no formato "ID - Nome" para todos os usuários
+            list: Lista de strings no formato "ID - Nome" para usuários aprovados
         """
-        return [f"{u.id} - {u.name}" for u in session.query(User).all()]
-
+        # Filtra apenas usuários aprovados (approved = True)
+        usuarios_aprovados = session.query(User).filter(
+            User.approved == True
+        ).all()
+        
+        return [f"{u.id} - {u.name}" for u in usuarios_aprovados]
     # ---------------- CRUD ----------------
     def load(self):
         """
@@ -161,7 +170,7 @@ class AdoptionsTab(ttk.Frame):
                                      ad.user.name if ad.user else "-",
                                      ad.status or "-"))
 
-        # Atualizar listas de combobox
+        # Atualizar listas de combobox (agora só mostra animais DISPONÍVEIS e usuários APROVADOS)
         self.inputs["Animal *"]["values"] = self.get_animals()
         self.inputs["Usuário *"]["values"] = self.get_users()
 

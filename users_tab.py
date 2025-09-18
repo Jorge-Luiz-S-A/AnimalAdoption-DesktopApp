@@ -38,7 +38,7 @@ class UsersTab(ttk.Frame):
         left_panel = ttk.Frame(main_container)
         left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0,10))
 
-        ttk.Label(left_panel, text="Lista de Usuários", font=("Arial",10,"bold")).pack(anchor=tk.W, pady=(0,5))
+        ttk.Label(left_panel, text="Lista de Tutores", font=("Arial",10,"bold")).pack(anchor=tk.W, pady=(0,5))
 
         table_frame = ttk.Frame(left_panel)
         table_frame.pack(fill=tk.BOTH, expand=True)
@@ -62,7 +62,7 @@ class UsersTab(ttk.Frame):
         right_panel.pack(side=tk.RIGHT, fill=tk.Y)
         right_panel.pack_propagate(False)
 
-        ttk.Label(right_panel, text="Detalhes do Usuário", font=("Arial",10,"bold")).pack(anchor=tk.W, pady=(0,10))
+        ttk.Label(right_panel, text="Detalhes do Tutor", font=("Arial",10,"bold")).pack(anchor=tk.W, pady=(0,10))
 
         form_container = ttk.Frame(right_panel)
         form_container.pack(fill=tk.BOTH, expand=True)
@@ -113,7 +113,7 @@ class UsersTab(ttk.Frame):
         ttk.Button(btn_frame, text="Novo", command=self.new).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Salvar", command=self.save).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Excluir", command=self.delete).pack(side=tk.LEFT, padx=4)
-        ttk.Button(btn_frame, text="Atualizar", command=self.load).pack(side=tk.LEFT, padx=4)
+        ttk.Button(btn_frame, text="Atualizar Página", command=self.load).pack(side=tk.LEFT, padx=4)
 
         self.selected_id = None
         self.load()
@@ -193,18 +193,18 @@ class UsersTab(ttk.Frame):
 
         session.commit()
         self.load()
-        messagebox.showinfo("Sucesso", "Usuário salvo com sucesso.")
+        messagebox.showinfo("Sucesso", "Tutor salvo com sucesso.")
 
     def delete(self):
         """Exclui o usuário selecionado após confirmação."""
         if not self.selected_id:
-            messagebox.showerror("Erro", "Selecione um usuário.")
+            messagebox.showerror("Erro", "Selecione um tutor.")
             return
-        if not messagebox.askyesno("Confirmar", "Excluir usuário selecionado?"):
+        if not messagebox.askyesno("Confirmar", "Excluir tutor selecionado?"):
             return
         u = session.get(User, self.selected_id)
         session.delete(u)
         session.commit()
         self.new()
         self.load()
-        messagebox.showinfo("Sucesso", "Usuário excluído com sucesso.")
+        messagebox.showinfo("Sucesso", "Tutor excluído com sucesso.")
