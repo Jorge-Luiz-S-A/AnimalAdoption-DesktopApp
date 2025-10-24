@@ -1,368 +1,174 @@
+# adoptions_tab.py
 """
-Módulo de Gerenciamento de Processos de Adoção - Fluxo Completo
----------------------------------------------------------------
-Este módulo gerencia todo o ciclo de vida dos processos de adoção no sistema
-do abrigo. Desde o questionário inicial até a finalização da adoção, com
-controle de status e atualização automática dos animais.
-
-Funcionalidades principais:
-- Criação e acompanhamento de processos de adoção
-- Controle de status com fluxo definido
-- Registro de datas de visitas (online e presencial)
-- Vinculação entre animais disponíveis e usuários aprovados
-- Atualização automática do status dos animais
-- Sistema de observações e notas do processo
-
-Fluxo de status implementado:
-1. Questionário → 2. Triagem → 3. Visita Online → 4. Visita Presencial → 
-5. Documentos → 6. Aprovado → 7. Finalizado/Recusado
-
-Validações de integridade:
-- Só permite animais com status "Disponível"
-- Só permite usuários com status "Aprovado"
-- Atualização automática do animal quando adoção é finalizada
-- Restauração do status do animal quando adoção é cancelada
+Aba para gerenciar processos de adoção
 """
-
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database import session
 from models import AdoptionProcess, Animal, User
-from utils import ADOPTION_STEPS
 
 class AdoptionsTab(ttk.Frame):
-    """
-    Classe para gerenciamento completo de processos de adoção.
-    
-    Esta classe implementa uma interface dividida em:
-    - Painel esquerdo: Lista de processos em andamento
-    - Painel direito: Formulário detalhado do processo
-    
-    Oferece operações completas de CRUD com validações de negócio
-    e integração automática com o status dos animais.
-    
-    Atributos:
-        selected_id (int): ID do processo selecionado para edição
-        tree (ttk.Treeview): Tabela de processos
-        inputs (dict): Campos do formulário de processo
-    """
-    
     def __init__(self, parent):
-        """
-        Inicializa a aba de processos de adoção.
-        
-        Args:
-            parent: Widget pai container
-            
-        A construção da interface inclui:
-        1. Divisão em painéis esquerdo/direito
-        2. Tabela de processos com scroll
-        3. Formulário scrollable com todos os campos
-        4. Sistema de datas para visitas
-        5. Botões de ação
-        """
         super().__init__(parent)
-        self.pack(fill=tk.BOTH, expand=True)
-
-        # Container principal
-        main_container = ttk.Frame(self)
-        main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-        # ========== PAINEL ESQUERDO - LISTA DE ADOÇÕES ==========
-        left_panel = ttk.Frame(main_container)
-        left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
-
-        # Título da seção
-        ttk.Label(left_panel, text="Lista de Adoções", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(0, 5))
-
-        # Container da tabela
-        table_frame = ttk.Frame(left_panel)
-        table_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Scrollbar vertical
-        scrollbar = ttk.Scrollbar(table_frame)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        # Tabela de processos
-        self.tree = ttk.Treeview(
-            table_frame,
-            columns=("ID", "Animal", "Usuário", "Status"),
-            show="headings",
-            yscrollcommand=scrollbar.set,
-            height=20
-        )
-        scrollbar.config(command=self.tree.yview)
-
-        # Configuração das colunas
-        for c, w in (("ID", 50), ("Animal", 150), ("Usuário", 150), ("Status", 120)):
-            self.tree.heading(c, text=c.upper())
-            self.tree.column(c, width=w, anchor=tk.W)
-
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        ttk.Label(self, text="Processos de Adoção", font=("Arial", 14, "bold")).pack(pady=10)
+        
+        # Frame principal
+        main_frame = ttk.Frame(self)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Lista de adoções
+        left_frame = ttk.Frame(main_frame)
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        
+        ttk.Label(left_frame, text="Adoções em Andamento", font=("Arial", 10, "bold")).pack(anchor=tk.W)
+        
+        self.tree = ttk.Treeview(left_frame, columns=("ID", "Animal", "Tutor", "Status"), show="headings", height=15)
+        for col, width in [("ID", 50), ("Animal", 150), ("Tutor", 150), ("Status", 100)]:
+            self.tree.heading(col, text=col)
+            self.tree.column(col, width=width)
+        self.tree.pack(fill=tk.BOTH, expand=True)
         self.tree.bind("<<TreeviewSelect>>", self.on_select)
-
-        # ========== PAINEL DIREITO - FORMULÁRIO ==========
-        right_panel = ttk.Frame(main_container, width=400)
-        right_panel.pack(side=tk.RIGHT, fill=tk.Y)
-        right_panel.pack_propagate(False)
-
-        ttk.Label(right_panel, text="Detalhes da Adoção", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(0, 10))
-
-        # Container scrollable do formulário
-        form_container = ttk.Frame(right_panel)
-        form_container.pack(fill=tk.BOTH, expand=True)
-
-        canvas = tk.Canvas(form_container)
-        scrollbar_form = ttk.Scrollbar(form_container, orient="vertical", command=canvas.yview)
-        self.scrollable_frame = ttk.Frame(canvas)
-
-        # Configuração do scroll
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar_form.set)
-
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar_form.pack(side="right", fill="y")
-
-        # ========== CAMPOS DO FORMULÁRIO ==========
-        r = 0
-        fields = [
-            ("Animal *", ttk.Combobox, {"values": self.get_animals(), "state": "readonly", "width": 30}),
-            ("Usuário *", ttk.Combobox, {"values": self.get_users(), "state": "readonly", "width": 30}),
-            ("Status", ttk.Combobox, {"values": ADOPTION_STEPS, "state": "readonly", "width": 30}),
-            ("Visita Online", ttk.Entry, {"width": 30}),  # Data no formato DD/MM/AAAA
-            ("Visita Presencial", ttk.Entry, {"width": 30}),  # Data no formato DD/MM/AAAA
-        ]
-
-        self.inputs = {}
-        for label_text, widget_class, opts in fields:
-            ttk.Label(self.scrollable_frame, text=label_text).grid(row=r, column=0, sticky="w", pady=(5, 0))
-            r += 1
-            w = widget_class(self.scrollable_frame, **opts)
-            w.grid(row=r, column=0, sticky="we", pady=(0, 5))
-            self.inputs[label_text] = w
-            r += 1
-
-        # Campo de observações
-        ttk.Label(self.scrollable_frame, text="Notas").grid(row=r, column=0, sticky="w", pady=(5, 0))
-        r += 1
-        self.inputs["Notas"] = tk.Text(self.scrollable_frame, width=30, height=5, wrap="word")
-        self.inputs["Notas"].grid(row=r, column=0, sticky="we", pady=(0, 5))
-        r += 1
-
-        # ========== BOTÕES DE AÇÃO ==========
-        btn_frame = ttk.Frame(self.scrollable_frame)
-        btn_frame.grid(row=r, column=0, pady=10)
         
-        ttk.Button(btn_frame, text="Novo", command=self.new).pack(side=tk.LEFT, padx=4)
-        ttk.Button(btn_frame, text="Salvar", command=self.save).pack(side=tk.LEFT, padx=4)
-        ttk.Button(btn_frame, text="Excluir", command=self.delete).pack(side=tk.LEFT, padx=4)
-        ttk.Button(btn_frame, text="Atualizar Página", command=self.load).pack(side=tk.LEFT, padx=4)
-
-        # ========== INICIALIZAÇÃO ==========
+        # Formulário
+        form_frame = ttk.Frame(main_frame, width=300)
+        form_frame.pack(side=tk.RIGHT, fill=tk.Y)
+        form_frame.pack_propagate(False)
+        
+        ttk.Label(form_frame, text="Dados da Adoção", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(0, 10))
+        
+        # Campos
+        ttk.Label(form_frame, text="Animal:").pack(anchor=tk.W)
+        self.animal_combo = ttk.Combobox(form_frame, state="readonly", width=27)
+        self.animal_combo.pack(fill=tk.X, pady=(0, 10))
+        
+        ttk.Label(form_frame, text="Tutor:").pack(anchor=tk.W)
+        self.user_combo = ttk.Combobox(form_frame, state="readonly", width=27)
+        self.user_combo.pack(fill=tk.X, pady=(0, 10))
+        
+        ttk.Label(form_frame, text="Status:").pack(anchor=tk.W)
+        self.status_combo = ttk.Combobox(form_frame, values=["Questionário", "Triagem", "Aprovado", "Finalizado"], state="readonly", width=27)
+        self.status_combo.pack(fill=tk.X, pady=(0, 10))
+        
+        ttk.Label(form_frame, text="Observações:").pack(anchor=tk.W)
+        self.notes_text = tk.Text(form_frame, height=4, width=30)
+        self.notes_text.pack(fill=tk.X, pady=(0, 10))
+        
+        # Botões
+        btn_frame = ttk.Frame(form_frame)
+        btn_frame.pack(pady=10)
+        
+        ttk.Button(btn_frame, text="Novo", command=self.novo).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Salvar", command=self.salvar).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Excluir", command=self.excluir).pack(side=tk.LEFT, padx=5)
+        
         self.selected_id = None
-        self.load()
-
-    # ========== FUNÇÕES AUXILIARES ==========
-
-    def get_animals(self):
-        """
-        Obtém lista de animais disponíveis para adoção.
-        
-        Filtra apenas animais com status "Disponível" para garantir
-        que só animais realmente disponíveis apareçam na lista.
-        
-        Returns:
-            list: Lista de strings no formato "ID - Nome" para animais disponíveis
-        """
-        # Filtra apenas animais com status "Disponível"
-        animais_disponiveis = session.query(Animal).filter(
-            Animal.status == "Disponível"
-        ).all()
-        
-        return [f"{a.id} - {a.name}" for a in animais_disponiveis]
+        self.carregar_dados()
     
-    def get_users(self):
-        """
-        Obtém lista de usuários aprovados para adoção.
+    def carregar_dados(self):
+        """Carrega comboboxes e lista"""
+        # Animais disponíveis
+        animais = session.query(Animal).filter(Animal.status == "Disponível").all()
+        self.animal_combo['values'] = [f"{a.id} - {a.name}" for a in animais]
         
-        Filtra apenas usuários com approved = True para garantir
-        que só usuários habilitados possam ser vinculados a processos.
+        # Usuários aprovados
+        usuarios = session.query(User).filter(User.approved == True).all()
+        self.user_combo['values'] = [f"{u.id} - {u.name}" for u in usuarios]
         
-        Returns:
-            list: Lista de strings no formato "ID - Nome" para usuários aprovados
-        """
-        # Filtra apenas usuários aprovados
-        usuarios_aprovados = session.query(User).filter(
-            User.approved == True
-        ).all()
-        
-        return [f"{u.id} - {u.name}" for u in usuarios_aprovados]
-
-    # ========== OPERAÇÕES CRUD ==========
-
-    def load(self):
-        """
-        Carrega todos os processos de adoção na tabela.
-        
-        Ordena os processos por ID decrescente (mais recentes primeiro)
-        e atualiza as listas de animais e usuários nos comboboxes.
-        """
-        # Limpa a tabela atual
-        for i in self.tree.get_children():
-            self.tree.delete(i)
+        # Lista de adoções
+        for item in self.tree.get_children():
+            self.tree.delete(item)
             
-        # Busca todos os processos ordenados por ID decrescente
-        for adocao in session.query(AdoptionProcess).order_by(AdoptionProcess.id.desc()).all():
-            self.tree.insert("", "end", iid=str(adocao.id),
-                           values=(adocao.id,
-                                   adocao.animal.name if adocao.animal else "-",
-                                   adocao.user.name if adocao.user else "-",
-                                   adocao.status or "-"))
-
-        # Atualiza as listas nos comboboxes
-        self.inputs["Animal *"]["values"] = self.get_animals()
-        self.inputs["Usuário *"]["values"] = self.get_users()
-
+        adopcoes = session.query(AdoptionProcess).all()
+        for adopcao in adopcoes:
+            self.tree.insert("", "end", values=(
+                adopcao.id,
+                adopcao.animal.name if adopcao.animal else "-",
+                adopcao.user.name if adopcao.user else "-",
+                adopcao.status
+            ))
+    
     def on_select(self, event):
-        """
-        Manipula a seleção de um processo na lista.
-        
-        Preenche o formulário com os dados do processo selecionado
-        e formata as datas para exibição no padrão DD/MM/AAAA.
-        """
-        sel = self.tree.selection()
-        if not sel:
-            return
+        """Quando seleciona uma adoção"""
+        selection = self.tree.selection()
+        if selection:
+            item = self.tree.item(selection[0])
+            self.selected_id = item['values'][0]
             
-        # Busca o processo selecionado
-        adocao = session.get(AdoptionProcess, int(sel[0]))
-        self.selected_id = adocao.id
-
-        # Preenche campos básicos
-        self.inputs["Animal *"].set(f"{adocao.animal.id} - {adocao.animal.name}" if adocao.animal else "")
-        self.inputs["Usuário *"].set(f"{adocao.user.id} - {adocao.user.name}" if adocao.user else "")
-        self.inputs["Status"].set(adocao.status or "")
-        
-        # Preenche datas de visita (formatadas)
-        self.inputs["Visita Online"].delete(0, tk.END)
-        if adocao.virtual_visit_at:
-            self.inputs["Visita Online"].insert(0, adocao.virtual_visit_at.strftime("%d/%m/%Y"))
+            adopcao = session.query(AdoptionProcess).get(self.selected_id)
             
-        self.inputs["Visita Presencial"].delete(0, tk.END)
-        if adocao.in_person_visit_at:
-            self.inputs["Visita Presencial"].insert(0, adocao.in_person_visit_at.strftime("%d/%m/%Y"))
+            if adopcao.animal:
+                self.animal_combo.set(f"{adopcao.animal.id} - {adopcao.animal.name}")
+            if adopcao.user:
+                self.user_combo.set(f"{adopcao.user.id} - {adopcao.user.name}")
+                
+            self.status_combo.set(adopcao.status)
             
-        # Preenche observações
-        self.inputs["Notas"].delete("1.0", tk.END)
-        self.inputs["Notas"].insert("1.0", adocao.notes or "")
-
-    def new(self):
-        """Limpa o formulário para criar um novo processo."""
+            self.notes_text.delete("1.0", tk.END)
+            self.notes_text.insert("1.0", adopcao.notes or "")
+    
+    def novo(self):
+        """Nova adoção"""
         self.selected_id = None
-        for key, widget in self.inputs.items():
-            if isinstance(widget, ttk.Combobox):
-                widget.set("")
-            elif isinstance(widget, tk.Text):
-                widget.delete("1.0", tk.END)
-            elif isinstance(widget, tk.Entry):
-                widget.delete(0, tk.END)
-
-    def save(self):
-        """
-        Salva ou atualiza um processo de adoção.
+        self.animal_combo.set("")
+        self.user_combo.set("")
+        self.status_combo.set("Questionário")
+        self.notes_text.delete("1.0", tk.END)
+    
+    def salvar(self):
+        """Salva adoção"""
+        animal_val = self.animal_combo.get()
+        user_val = self.user_combo.get()
+        status = self.status_combo.get()
+        notes = self.notes_text.get("1.0", tk.END).strip()
         
-        Realiza validações de campos obrigatórios e formato de datas,
-        atualiza automaticamente o status do animal vinculado.
-        """
-        # Validações de campos obrigatórios
-        animal_val = self.inputs["Animal *"].get().strip()
-        user_val = self.inputs["Usuário *"].get().strip()
-
         if not animal_val or not user_val:
-            messagebox.showerror("Erro", "Animal e Usuário são obrigatórios.")
+            messagebox.showerror("Erro", "Selecione animal e tutor!")
             return
-
-        # Extrai IDs dos valores do combobox
+        
+        # Extrai IDs
         animal_id = int(animal_val.split(" - ")[0])
         user_id = int(user_val.split(" - ")[0])
-
-        # Determina se é criação ou edição
+        
         if self.selected_id:
-            adocao = session.get(AdoptionProcess, self.selected_id)
+            # Edição
+            adopcao = session.query(AdoptionProcess).get(self.selected_id)
+            adopcao.animal_id = animal_id
+            adopcao.user_id = user_id
+            adopcao.status = status
+            adopcao.notes = notes
+            mensagem = "Adoção atualizada!"
         else:
-            adocao = AdoptionProcess()
-            session.add(adocao)
-
-        # Atualiza dados básicos
-        adocao.animal_id = animal_id
-        adocao.user_id = user_id
-        adocao.status = self.inputs["Status"].get().strip() or None
-        adocao.notes = self.inputs["Notas"].get("1.0", tk.END).strip() or None
-
-        # Processa datas de visita com tratamento de erro
-        from datetime import datetime
-        visita_online = self.inputs["Visita Online"].get().strip()
-        visita_presencial = self.inputs["Visita Presencial"].get().strip()
-        
-        try:
-            if visita_online:
-                adocao.virtual_visit_at = datetime.strptime(visita_online, "%d/%m/%Y")
-            else:
-                adocao.virtual_visit_at = None
-                
-            if visita_presencial:
-                adocao.in_person_visit_at = datetime.strptime(visita_presencial, "%d/%m/%Y")
-            else:
-                adocao.in_person_visit_at = None
-        except ValueError:
-            messagebox.showerror("Erro", "Formato de data inválido. Use DD/MM/AAAA.")
-            return
-
-        try:
-            # Salva o processo
-            session.commit()
+            # Nova
+            adopcao = AdoptionProcess(animal_id=animal_id, user_id=user_id, status=status, notes=notes)
+            session.add(adopcao)
             
-            # Atualiza automaticamente o status do animal
-            adocao.update_animal_status()
-            session.commit()
-            
-            self.load()
-            messagebox.showinfo("Sucesso", "Adoção salva com sucesso. Status do animal atualizado automaticamente.")
-        except Exception as e:
-            session.rollback()
-            messagebox.showerror("Erro", f"Erro ao salvar adoção: {e}")
-
-    def delete(self):
-        """
-        Exclui o processo de adoção selecionado.
+            # Atualiza status do animal
+            animal = session.query(Animal).get(animal_id)
+            animal.status = "Em processo"
+            mensagem = "Adoção criada!"
         
-        Antes de excluir, restaura o status do animal para "Disponível"
-        para que ele possa aparecer em novos processos de adoção.
-        """
+        session.commit()
+        self.carregar_dados()
+        self.novo()
+        messagebox.showinfo("Sucesso", mensagem)
+    
+    def excluir(self):
+        """Exclui adoção"""
         if not self.selected_id:
-            messagebox.showerror("Erro", "Selecione uma adoção.")
+            messagebox.showerror("Erro", "Selecione uma adoção!")
             return
             
-        if not messagebox.askyesno("Confirmar", "Excluir adoção selecionada?"):
-            return
+        if messagebox.askyesno("Confirmar", "Excluir adoção selecionada?"):
+            adopcao = session.query(AdoptionProcess).get(self.selected_id)
             
-        try:
-            adocao = session.get(AdoptionProcess, self.selected_id)
+            # Restaura status do animal
+            if adopcao.animal:
+                adopcao.animal.status = "Disponível"
             
-            # Restaura o status do animal para disponível
-            if adocao.animal:
-                adocao.animal.status = "Disponível"
-            
-            session.delete(adocao)
+            session.delete(adopcao)
             session.commit()
-            
-            self.new()
-            self.load()
-            messagebox.showinfo("Sucesso", "Adoção excluída com sucesso. Status do animal restaurado para Disponível.")
-        except Exception as e:
-            session.rollback()
-            messagebox.showerror("Erro", f"Erro ao excluir adoção: {e}")
+            self.carregar_dados()
+            self.novo()
+            messagebox.showinfo("Sucesso", "Adoção excluída!")
