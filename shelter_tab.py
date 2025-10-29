@@ -1,171 +1,207 @@
-# shelter_tab.py
-"""
-Aba para gerenciar abrigos
-"""
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database import session
-from models import Shelter, Animal
+from models import Shelter, Animal, AdoptionProcess
 
 class ShelterTab(ttk.Frame):
+    
     def __init__(self, parent):
         super().__init__(parent)
-        self.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        ttk.Label(self, text="Gerenciamento de Abrigos", font=("Arial", 14, "bold")).pack(pady=10)
-        
-        main_frame = ttk.Frame(self)
-        main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Lista de abrigos
-        left_frame = ttk.Frame(main_frame)
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
-        
-        ttk.Label(left_frame, text="Lista de Abrigos", font=("Arial", 10, "bold")).pack(anchor=tk.W)
-        
-        self.tree = ttk.Treeview(left_frame, columns=("ID", "Nome", "Capacidade", "Animais"), show="headings", height=15)
-        for col, width in [("ID", 50), ("Nome", 200), ("Capacidade", 100), ("Animais", 100)]:
-            self.tree.heading(col, text=col)
-            self.tree.column(col, width=width)
-        self.tree.pack(fill=tk.BOTH, expand=True)
-        self.tree.bind("<<TreeviewSelect>>", self.on_select)
-        
-        # Formulário
-        form_frame = ttk.Frame(main_frame, width=300)
-        form_frame.pack(side=tk.RIGHT, fill=tk.Y)
-        form_frame.pack_propagate(False)
-        
-        ttk.Label(form_frame, text="Dados do Abrigo", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(0, 10))
-        
-        # Campos
-        fields = [
-            ("Nome:", "nome_entry"),
-            ("Email:", "email_entry"),
-            ("Telefone:", "phone_entry"), 
-            ("Endereço:", "address_entry"),
-            ("Capacidade:", "capacity_entry")
+        self.pack(fill=tk.BOTH, expand=True)
+
+        main_container = ttk.Frame(self)
+        main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        left_panel = ttk.Frame(main_container)
+        left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+
+        ttk.Label(left_panel, text="Lista de Abrigos", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(0, 5))
+
+        table_frame = ttk.Frame(left_panel)
+        table_frame.pack(fill=tk.BOTH, expand=True)
+
+        scrollbar = ttk.Scrollbar(table_frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.tree = ttk.Treeview(
+            table_frame,
+            columns=("ID", "Nome", "Email", "Telefone", "Endereço", "Capacidade", "Resgatados", "Adotados", "Animais Atuais"),
+            show="headings",
+            yscrollcommand=scrollbar.set,
+            height=20
+        )
+        scrollbar.config(command=self.tree.yview)
+
+        columns_config = [
+            ("ID", 40), ("Nome", 150), ("Email", 180), ("Telefone", 100), 
+            ("Endereço", 150), ("Capacidade", 80), ("Resgatados", 80), 
+            ("Adotados", 80), ("Animais Atuais", 80)
         ]
         
+        for column_name, width in columns_config:
+            self.tree.heading(column_name, text=column_name.upper())
+            self.tree.column(column_name, width=width, anchor=tk.W)
+
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.tree.bind("<<TreeviewSelect>>", self.on_select)
+
+        right_panel = ttk.Frame(main_container, width=350)
+        right_panel.pack(side=tk.RIGHT, fill=tk.Y)
+        right_panel.pack_propagate(False)
+
+        ttk.Label(right_panel, text="Detalhes do Abrigo", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(0, 10))
+
+        form_container = ttk.Frame(right_panel)
+        form_container.pack(fill=tk.BOTH, expand=True)
+
+        canvas = tk.Canvas(form_container)
+        scrollbar_form = ttk.Scrollbar(form_container, orient="vertical", command=canvas.yview)
+        self.scrollable_frame = ttk.Frame(canvas)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar_form.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar_form.pack(side="right", fill="y")
+
+        r = 0
+        fields = [
+            ("Nome", ttk.Entry, {"width": 30}),
+            ("Email", ttk.Entry, {"width": 30}),
+            ("Telefone", ttk.Entry, {"width": 30}),
+            ("Endereço", ttk.Entry, {"width": 30}),
+            ("Capacidade", ttk.Entry, {"width": 30}),
+        ]
+
         self.inputs = {}
-        for i, (label, key) in enumerate(fields):
-            ttk.Label(form_frame, text=label).grid(row=i*2, column=0, sticky="w", pady=(5, 0))
-            entry = ttk.Entry(form_frame, width=30)
-            entry.grid(row=i*2+1, column=0, sticky="we", pady=(0, 10))
-            self.inputs[key] = entry
+        for label_text, widget_class, opts in fields:
+            ttk.Label(self.scrollable_frame, text=label_text).grid(row=r, column=0, columnspan=2, sticky="w", pady=(5, 0))
+            r += 1
+            w = widget_class(self.scrollable_frame, **opts)
+            w.grid(row=r, column=0, columnspan=2, sticky="we", pady=(0, 5))
+            self.inputs[label_text] = w
+            r += 1
+
+        btn_frame = ttk.Frame(self.scrollable_frame)
+        btn_frame.grid(row=r, column=0, columnspan=2, pady=10)
         
-        # Botões
-        btn_frame = ttk.Frame(form_frame)
-        btn_frame.grid(row=10, column=0, pady=10)
-        
-        ttk.Button(btn_frame, text="Novo", command=self.novo).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="Salvar", command=self.salvar).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="Excluir", command=self.excluir).pack(side=tk.LEFT, padx=5)
-        
+        ttk.Button(btn_frame, text="Novo", command=self.new).pack(side=tk.LEFT, padx=4)
+        ttk.Button(btn_frame, text="Salvar", command=self.save).pack(side=tk.LEFT, padx=4)
+        ttk.Button(btn_frame, text="Excluir", command=self.delete).pack(side=tk.LEFT, padx=4)
+        ttk.Button(btn_frame, text="Atualizar Página", command=self.load).pack(side=tk.LEFT, padx=4)
+
         self.selected_id = None
-        self.carregar_lista()
-    
-    def carregar_lista(self):
-        """Carrega abrigos com estatísticas"""
-        for item in self.tree.get_children():
-            self.tree.delete(item)
+        self.load()
+
+    def load(self):
+        for i in self.tree.get_children():
+            self.tree.delete(i)
+
+        abrigos = session.query(Shelter).order_by(Shelter.id.desc()).all()
+        
+        for abrigo in abrigos:
+            rescued_count = session.query(Animal).filter(Animal.shelter_id == abrigo.id).count()
             
-        abrigos = session.query(Shelter).all()
-        for shelter in abrigos:
-            # Conta animais no abrigo
-            animais_count = session.query(Animal).filter(Animal.shelter_id == shelter.id).count()
+            adopted_count = (
+                session.query(Animal)
+                .join(Animal.adoptions)
+                .filter(Animal.shelter_id == abrigo.id, AdoptionProcess.status == "Finalizado")
+                .count()
+            )
             
-            self.tree.insert("", "end", values=(
-                shelter.id, shelter.name or "", shelter.capacity or 0, animais_count
-            ))
-    
+            animais_atuais = rescued_count - adopted_count
+            
+            self.tree.insert(
+                "",
+                "end",
+                iid=str(abrigo.id),
+                values=(abrigo.id, abrigo.name or "", abrigo.email or "", abrigo.phone or "", 
+                        abrigo.address or "", abrigo.capacity or 0, rescued_count, 
+                        adopted_count, animais_atuais)
+            )
+
     def on_select(self, event):
-        """Quando seleciona um abrigo"""
-        selection = self.tree.selection()
-        if selection:
-            item = self.tree.item(selection[0])
-            self.selected_id = item['values'][0]
-            
-            shelter = session.query(Shelter).get(self.selected_id)
-            
-            # Preenche campos
-            self.inputs["nome_entry"].delete(0, tk.END)
-            self.inputs["nome_entry"].insert(0, shelter.name or "")
-            
-            self.inputs["email_entry"].delete(0, tk.END)
-            self.inputs["email_entry"].insert(0, shelter.email or "")
-            
-            self.inputs["phone_entry"].delete(0, tk.END)
-            self.inputs["phone_entry"].insert(0, shelter.phone or "")
-            
-            self.inputs["address_entry"].delete(0, tk.END)
-            self.inputs["address_entry"].insert(0, shelter.address or "")
-            
-            self.inputs["capacity_entry"].delete(0, tk.END)
-            self.inputs["capacity_entry"].insert(0, str(shelter.capacity or 0))
-    
-    def novo(self):
-        """Novo abrigo"""
-        self.selected_id = None
-        for entry in self.inputs.values():
-            entry.delete(0, tk.END)
-    
-    def salvar(self):
-        """Salva abrigo"""
-        nome = self.inputs["nome_entry"].get().strip()
-        capacidade = self.inputs["capacity_entry"].get().strip()
-        
-        if not nome:
-            messagebox.showerror("Erro", "Nome é obrigatório!")
+        sel = self.tree.selection()
+        if not sel: 
             return
+            
+        abrigo = session.get(Shelter, int(sel[0]))
+        self.selected_id = abrigo.id
+
+        self.inputs["Nome"].delete(0, tk.END)
+        self.inputs["Nome"].insert(0, abrigo.name or "")
+        
+        self.inputs["Email"].delete(0, tk.END)
+        self.inputs["Email"].insert(0, abrigo.email or "")
+        
+        self.inputs["Telefone"].delete(0, tk.END)
+        self.inputs["Telefone"].insert(0, abrigo.phone or "")
+        
+        self.inputs["Endereço"].delete(0, tk.END)
+        self.inputs["Endereço"].insert(0, abrigo.address or "")
+        
+        self.inputs["Capacidade"].delete(0, tk.END)
+        self.inputs["Capacidade"].insert(0, str(abrigo.capacity or 0))
+
+    def new(self):
+        self.selected_id = None
+        for key, widget in self.inputs.items():
+            if isinstance(widget, ttk.Combobox):
+                widget.set("")
+            else:
+                widget.delete(0, tk.END)
+
+    def save(self):
+        if self.selected_id:
+            abrigo = session.get(Shelter, self.selected_id)
+        else:
+            abrigo = Shelter()
+            session.add(abrigo)
+
+        abrigo.name = self.inputs["Nome"].get().strip() or "Meu Abrigo"
+        abrigo.email = self.inputs["Email"].get().strip() or None
+        abrigo.phone = self.inputs["Telefone"].get().strip() or None
+        abrigo.address = self.inputs["Endereço"].get().strip() or None
         
         try:
-            capacidade_int = int(capacidade) if capacidade else 0
-        except:
-            messagebox.showerror("Erro", "Capacidade deve ser um número!")
+            abrigo.capacity = int(self.inputs["Capacidade"].get().strip() or 0)
+        except ValueError:
+            messagebox.showerror("Erro", "Capacidade deve ser um número válido.")
             return
-        
-        if self.selected_id:
-            # Edição
-            shelter = session.query(Shelter).get(self.selected_id)
-            shelter.name = nome
-            shelter.email = self.inputs["email_entry"].get().strip() or None
-            shelter.phone = self.inputs["phone_entry"].get().strip() or None
-            shelter.address = self.inputs["address_entry"].get().strip() or None
-            shelter.capacity = capacidade_int
-            mensagem = "Abrigo atualizado!"
-        else:
-            # Novo
-            shelter = Shelter(
-                name=nome,
-                email=self.inputs["email_entry"].get().strip() or None,
-                phone=self.inputs["phone_entry"].get().strip() or None,
-                address=self.inputs["address_entry"].get().strip() or None,
-                capacity=capacidade_int
-            )
-            session.add(shelter)
-            mensagem = "Abrigo cadastrado!"
-        
-        session.commit()
-        self.carregar_lista()
-        self.novo()
-        messagebox.showinfo("Sucesso", mensagem)
-    
-    def excluir(self):
-        """Exclui abrigo"""
-        if not self.selected_id:
-            messagebox.showerror("Erro", "Selecione um abrigo!")
-            return
-            
-        # Verifica se há animais no abrigo
-        animais_count = session.query(Animal).filter(Animal.shelter_id == self.selected_id).count()
-        if animais_count > 0:
-            messagebox.showerror("Erro", f"Não é possível excluir! Existem {animais_count} animais neste abrigo.")
-            return
-            
-        if messagebox.askyesno("Confirmar", "Excluir abrigo selecionado?"):
-            shelter = session.query(Shelter).get(self.selected_id)
-            session.delete(shelter)
+
+        try:
             session.commit()
-            self.carregar_lista()
-            self.novo()
-            messagebox.showinfo("Sucesso", "Abrigo excluído!")
+            self.load()
+            messagebox.showinfo("Sucesso", "Abrigo salvo com sucesso.")
+        except Exception as e:
+            session.rollback()
+            messagebox.showerror("Erro", f"Erro ao salvar abrigo: {e}")
+
+    def delete(self):
+        if not self.selected_id:
+            messagebox.showerror("Erro", "Selecione um abrigo.")
+            return
+            
+        animais_vinculados = session.query(Animal).filter(Animal.shelter_id == self.selected_id).count()
+        if animais_vinculados > 0:
+            messagebox.showerror("Erro", f"Não é possível excluir o abrigo. Existem {animais_vinculados} animais vinculados a ele.")
+            return
+            
+        if not messagebox.askyesno("Confirmar", "Excluir abrigo selecionado?"):
+            return
+            
+        try:
+            abrigo = session.get(Shelter, self.selected_id)
+            session.delete(abrigo)
+            session.commit()
+            
+            self.new()
+            self.load()
+            messagebox.showinfo("Sucesso", "Abrigo excluído com sucesso.")
+        except Exception as e:
+            session.rollback()
+            messagebox.showerror("Erro", f"Erro ao excluir abrigo: {e}")
