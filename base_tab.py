@@ -45,20 +45,18 @@ class BaseTab(ttk.Frame):
         - Herda da classe ttk.Frame para compatibilidade temática
         - Inicializa o sistema de estilos do ttk
         - Define estilos padrão para labels e botões
-        - Integra com tema sv_ttk para aparência moderna
         """
         super().__init__(parent)
         self.style = ttk.Style()
         
         # Configuração de estilos visuais padronizados
-        # Compatíveis com o tema sv_ttk para consistência visual
         self.style.configure("Header.TLabel", 
-                           font=("Segoe UI", 10, "bold"),
+                           font=("Arial", 10, "bold"),
                            foreground="#2c3e50")  # Azul escuro elegante
         
         self.style.configure("Required.TLabel", 
                            foreground="#e74c3c",  # Vermelho para indicar obrigatoriedade
-                           font=("Segoe UI", 9, "bold"))
+                           font=("Arial", 9, "bold"))
         
         self.style.configure("Success.TButton",
                            foreground="#27ae60")  # Verde para ações positivas

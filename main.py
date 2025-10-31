@@ -9,7 +9,7 @@ Funcionalidades principais:
 - Tela de login segura
 - Carregamento da interface principal com abas
 - Controle de acesso baseado em nível de usuário
-- Gerenciamento de tema visual moderno
+- Gerenciamento de tema visual
 
 Arquitetura da aplicação:
 - Model-View-Controller implícito
@@ -26,7 +26,7 @@ Fluxo de execução:
 
 import tkinter as tk
 from tkinter import ttk
-import sv_ttk  # Tema visual moderno para tkinter
+import sv_ttk
 
 from animals_tab import AnimalsTab
 from adoptions_tab import AdoptionsTab
@@ -58,7 +58,7 @@ class MainApp(tk.Tk):
             
         Configurações:
             - Título e geometria da janela
-            - Tema visual sv_ttk moderno
+            - Tema visual sv_ttk
             - Notebook como container principal
             - Abas baseadas no nível de acesso
         """
@@ -66,10 +66,10 @@ class MainApp(tk.Tk):
         
         # Configuração da janela principal
         self.title("Sistema de Gerenciamento de Abrigo Animal")
-        self.geometry("1400x900")  # Tamanho maior para melhor experiência
+        self.geometry("1280x720")
         
-        # Aplica o tema visual moderno sv_ttk
-        sv_ttk.set_theme("light")  # Tema claro e moderno
+        # Aplica o tema visual moderno
+        sv_ttk.set_theme("light")
         
         # Armazena o usuário logado para controle de acesso
         self.usuario_logado = usuario_logado
@@ -81,31 +81,25 @@ class MainApp(tk.Tk):
         # ========== ABAS PADRÃO (ACESSO A TODOS) ==========
         
         # Aba de Animais - Gerenciamento completo
-        animals_tab = AnimalsTab(self.notebook)
-        self.notebook.add(animals_tab, text="Animais")
+        self.notebook.add(AnimalsTab(self.notebook), text="Animais")
         
         # Aba de Adoções - Processos de adoção
-        adoptions_tab = AdoptionsTab(self.notebook)
-        self.notebook.add(adoptions_tab, text="Adoções")
+        self.notebook.add(AdoptionsTab(self.notebook), text="Adoções")
         
         # Aba de Tutores - Usuários do sistema
-        users_tab = UsersTab(self.notebook)
-        self.notebook.add(users_tab, text="Tutores")
+        self.notebook.add(UsersTab(self.notebook), text="Tutores")
         
         # Aba de Abrigos - Gerenciamento de abrigos
-        shelter_tab = ShelterTab(self.notebook)
-        self.notebook.add(shelter_tab, text="Abrigos")
+        self.notebook.add(ShelterTab(self.notebook), text="Abrigos")
         
         # Aba de Pesquisa - Busca avançada
-        search_tab = SearchTab(self.notebook)
-        self.notebook.add(search_tab, text="Pesquisa")
+        self.notebook.add(SearchTab(self.notebook), text="Pesquisa")
         
         # ========== ABA ADMINISTRATIVA (SOMENTE ADMINS) ==========
         
         # Verifica se o usuário tem permissão de admin
         if usuario_logado and usuario_logado.is_admin():
-            adm_tab = AdmTab(self.notebook, usuario_logado)
-            self.notebook.add(adm_tab, text="Administração")
+            self.notebook.add(AdmTab(self.notebook, usuario_logado), text="ADM")
         
         # Personaliza o título com informações do usuário
         if usuario_logado:
@@ -118,7 +112,7 @@ if __name__ == "__main__":
     Fluxo de execução:
     1. Inicializa o banco de dados (cria tabelas e dados padrão)
     2. Exibe a tela de login e tenta autenticar
-    3. Se sucesso: inicia a aplicação principal com tema moderno
+    3. Se sucesso: inicia a aplicação principal
     4. Se falha: encerra com mensagem
     """
     
@@ -132,9 +126,8 @@ if __name__ == "__main__":
     
     # Verificação de autenticação
     if usuario:
-        # Login bem-sucedido - inicia aplicação principal com tema moderno
+        # Login bem-sucedido - inicia aplicação principal
         print(f"Usuário {usuario.username} autenticado com sucesso!")
-        print("Carregando interface com tema moderno...")
         app = MainApp(usuario)
         app.mainloop()
     else:

@@ -1,0 +1,30 @@
+"""
+Dependências do Sistema de Gerenciamento de Abrigo Animal
+---------------------------------------------------------
+Este arquivo lista todas as dependências necessárias para executar
+o sistema completo. Use pip install -r requirements.txt para instalar.
+
+Dependências principais:
+- SQLAlchemy: ORM para banco de dados
+- bcrypt: Hash seguro de senhas
+- sv-ttk: Tema moderno para tkinter
+
+Versões testadas e compatíveis:
+- Python 3.8+
+- SQLAlchemy 1.4+
+- bcrypt 3.2+
+"""
+
+# Framework de banco de dados
+SQLAlchemy>=1.4.0
+
+# Segurança - hash de senhas
+bcrypt>=3.2.0
+
+# Interface gráfica moderna
+sv-ttk>=2.0.0
+
+# Dependências do Python (geralmente incluídas)
+# tkinter - Interface gráfica padrão
+# datetime - Manipulação de datas
+# typing - Tipagem estática

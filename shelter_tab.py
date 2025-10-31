@@ -1,28 +1,89 @@
+"""
+Módulo de Gerenciamento de Abrigos - CRUD Completo
+--------------------------------------------------
+Este módulo fornece uma interface completa para gerenciar todos os abrigos
+do sistema. Inclui controle de capacidade, estatísticas automáticas e
+gerenciamento de informações de contato.
+
+Funcionalidades principais:
+- Cadastro completo de abrigos com informações de contato
+- Controle de capacidade máxima de animais
+- Cálculo automático de estatísticas:
+  - Animais resgatados (total histórico)
+  - Animais adotados (com adoção finalizada)
+  - Animais atuais (resgatados - adotados)
+- Listagem organizada com todas as informações
+- Validação de capacidade para evitar superlotação
+
+Estatísticas calculadas automaticamente:
+- Resgatados: total de animais vinculados ao abrigo
+- Adotados: animais com processos finalizados
+- Atuais: diferença entre resgatados e adotados
+
+Validações implementadas:
+- Capacidade deve ser número positivo
+- Email deve ter formato válido (se informado)
+- Prevenção de exclusão de abrigos com animais vinculados
+"""
+
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database import session
 from models import Shelter, Animal, AdoptionProcess
 
 class ShelterTab(ttk.Frame):
+    """
+    Classe para gerenciamento completo de abrigos.
+    
+    Esta classe implementa operações de CRUD para abrigos com cálculo
+    automático de estatísticas e controle de capacidade.
+    
+    A interface é dividida em:
+    - Painel esquerdo: Lista de abrigos com estatísticas
+    - Painel direito: Formulário de cadastro/edição
+    
+    Atributos:
+        selected_id (int): ID do abrigo selecionado para edição
+        tree (ttk.Treeview): Tabela de abrigos
+        inputs (dict): Campos do formulário de abrigo
+    """
     
     def __init__(self, parent):
+        """
+        Inicializa a aba de gerenciamento de abrigos.
+        
+        Args:
+            parent: Widget pai container
+            
+        A construção inclui:
+        1. Divisão em painéis esquerdo/direito
+        2. Tabela com colunas para todas as informações
+        3. Formulário scrollable com campos de abrigo
+        4. Sistema de estatísticas automáticas
+        """
         super().__init__(parent)
         self.pack(fill=tk.BOTH, expand=True)
 
+        # Container principal
         main_container = ttk.Frame(self)
         main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
+        # ========== PAINEL ESQUERDO - LISTA DE ABRIGOS ==========
         left_panel = ttk.Frame(main_container)
         left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
 
+        # Título da seção
         ttk.Label(left_panel, text="Lista de Abrigos", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(0, 5))
 
+        # Container da tabela
         table_frame = ttk.Frame(left_panel)
         table_frame.pack(fill=tk.BOTH, expand=True)
 
+        # Scrollbar vertical
         scrollbar = ttk.Scrollbar(table_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
+        # Tabela de abrigos com estatísticas
         self.tree = ttk.Treeview(
             table_frame,
             columns=("ID", "Nome", "Email", "Telefone", "Endereço", "Capacidade", "Resgatados", "Adotados", "Animais Atuais"),
@@ -32,6 +93,7 @@ class ShelterTab(ttk.Frame):
         )
         scrollbar.config(command=self.tree.yview)
 
+        # Configuração detalhada das colunas
         columns_config = [
             ("ID", 40), ("Nome", 150), ("Email", 180), ("Telefone", 100), 
             ("Endereço", 150), ("Capacidade", 80), ("Resgatados", 80), 
@@ -45,12 +107,14 @@ class ShelterTab(ttk.Frame):
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.tree.bind("<<TreeviewSelect>>", self.on_select)
 
+        # ========== PAINEL DIREITO - FORMULÁRIO ==========
         right_panel = ttk.Frame(main_container, width=350)
         right_panel.pack(side=tk.RIGHT, fill=tk.Y)
         right_panel.pack_propagate(False)
 
         ttk.Label(right_panel, text="Detalhes do Abrigo", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(0, 10))
 
+        # Container scrollable do formulário
         form_container = ttk.Frame(right_panel)
         form_container.pack(fill=tk.BOTH, expand=True)
 
@@ -58,6 +122,7 @@ class ShelterTab(ttk.Frame):
         scrollbar_form = ttk.Scrollbar(form_container, orient="vertical", command=canvas.yview)
         self.scrollable_frame = ttk.Frame(canvas)
 
+        # Configuração do scroll
         self.scrollable_frame.bind(
             "<Configure>",
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
@@ -68,13 +133,14 @@ class ShelterTab(ttk.Frame):
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar_form.pack(side="right", fill="y")
 
+        # ========== CAMPOS DO FORMULÁRIO ==========
         r = 0
         fields = [
             ("Nome", ttk.Entry, {"width": 30}),
             ("Email", ttk.Entry, {"width": 30}),
             ("Telefone", ttk.Entry, {"width": 30}),
             ("Endereço", ttk.Entry, {"width": 30}),
-            ("Capacidade", ttk.Entry, {"width": 30}),
+            ("Capacidade", ttk.Entry, {"width": 30}),  # Campo numérico para capacidade
         ]
 
         self.inputs = {}
@@ -86,6 +152,7 @@ class ShelterTab(ttk.Frame):
             self.inputs[label_text] = w
             r += 1
 
+        # ========== BOTÕES DE AÇÃO ==========
         btn_frame = ttk.Frame(self.scrollable_frame)
         btn_frame.grid(row=r, column=0, columnspan=2, pady=10)
         
@@ -94,18 +161,35 @@ class ShelterTab(ttk.Frame):
         ttk.Button(btn_frame, text="Excluir", command=self.delete).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Atualizar Página", command=self.load).pack(side=tk.LEFT, padx=4)
 
+        # ========== INICIALIZAÇÃO ==========
         self.selected_id = None
         self.load()
 
     def load(self):
+        """
+        Carrega todos os abrigos com estatísticas calculadas.
+        
+        Para cada abrigo, calcula automaticamente:
+        - Animais resgatados: total de animais vinculados
+        - Animais adotados: animais com adoção finalizada
+        - Animais atuais: diferença entre resgatados e adotados
+        
+        Estas estatísticas são calculadas em tempo real a cada carregamento.
+        """
+        # Limpa a tabela atual
         for i in self.tree.get_children():
             self.tree.delete(i)
 
+        # Busca todos os abrigos ordenados por ID decrescente
         abrigos = session.query(Shelter).order_by(Shelter.id.desc()).all()
         
         for abrigo in abrigos:
+            # Calcula estatísticas para o abrigo
+            
+            # Animais resgatados: total de animais vinculados ao abrigo
             rescued_count = session.query(Animal).filter(Animal.shelter_id == abrigo.id).count()
             
+            # Animais adotados: animais com adoção finalizada
             adopted_count = (
                 session.query(Animal)
                 .join(Animal.adoptions)
@@ -113,8 +197,10 @@ class ShelterTab(ttk.Frame):
                 .count()
             )
             
+            # Animais atuais: resgatados - adotados
             animais_atuais = rescued_count - adopted_count
             
+            # Insere o abrigo na tabela com todas as informações
             self.tree.insert(
                 "",
                 "end",
@@ -125,13 +211,21 @@ class ShelterTab(ttk.Frame):
             )
 
     def on_select(self, event):
+        """
+        Manipula a seleção de um abrigo na lista.
+        
+        Preenche o formulário com os dados do abrigo selecionado
+        para permitir edição.
+        """
         sel = self.tree.selection()
         if not sel: 
             return
             
+        # Busca o abrigo selecionado
         abrigo = session.get(Shelter, int(sel[0]))
         self.selected_id = abrigo.id
 
+        # Preenche todos os campos do formulário
         self.inputs["Nome"].delete(0, tk.END)
         self.inputs["Nome"].insert(0, abrigo.name or "")
         
@@ -148,6 +242,7 @@ class ShelterTab(ttk.Frame):
         self.inputs["Capacidade"].insert(0, str(abrigo.capacity or 0))
 
     def new(self):
+        """Limpa o formulário para cadastrar um novo abrigo."""
         self.selected_id = None
         for key, widget in self.inputs.items():
             if isinstance(widget, ttk.Combobox):
@@ -156,17 +251,26 @@ class ShelterTab(ttk.Frame):
                 widget.delete(0, tk.END)
 
     def save(self):
+        """
+        Salva ou atualiza um abrigo no banco de dados.
+        
+        Valida a capacidade para garantir que seja um número válido
+        e define um nome padrão se não for informado.
+        """
+        # Determina se é criação ou edição
         if self.selected_id:
             abrigo = session.get(Shelter, self.selected_id)
         else:
             abrigo = Shelter()
             session.add(abrigo)
 
+        # Atualiza dados básicos
         abrigo.name = self.inputs["Nome"].get().strip() or "Meu Abrigo"
         abrigo.email = self.inputs["Email"].get().strip() or None
         abrigo.phone = self.inputs["Telefone"].get().strip() or None
         abrigo.address = self.inputs["Endereço"].get().strip() or None
         
+        # Processa capacidade (converte para inteiro)
         try:
             abrigo.capacity = int(self.inputs["Capacidade"].get().strip() or 0)
         except ValueError:
@@ -182,10 +286,17 @@ class ShelterTab(ttk.Frame):
             messagebox.showerror("Erro", f"Erro ao salvar abrigo: {e}")
 
     def delete(self):
+        """
+        Exclui o abrigo selecionado após confirmação.
+        
+        Verifica se há animais vinculados ao abrigo antes de permitir
+        a exclusão para manter a integridade referencial.
+        """
         if not self.selected_id:
             messagebox.showerror("Erro", "Selecione um abrigo.")
             return
             
+        # Verifica se há animais vinculados ao abrigo
         animais_vinculados = session.query(Animal).filter(Animal.shelter_id == self.selected_id).count()
         if animais_vinculados > 0:
             messagebox.showerror("Erro", f"Não é possível excluir o abrigo. Existem {animais_vinculados} animais vinculados a ele.")
