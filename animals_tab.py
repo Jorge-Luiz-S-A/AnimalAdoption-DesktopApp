@@ -1,30 +1,38 @@
 """
 Módulo de Gerenciamento de Animais - CRUD Completo
 --------------------------------------------------
-Este módulo fornece uma interface completa para gerenciar todos os animais
-do sistema de abrigo. Implementa operações de Create, Read, Update e Delete
-(CRUD) com validações robustas e interface intuitiva.
+Este módulo fornece uma interface completa e robusta para gerenciar o cadastro 
+de animais no sistema de abrigo, com foco em usabilidade e integridade dos dados.
 
 Funcionalidades principais:
-- Cadastro completo de animais com todas as informações relevantes
-- Listagem organizada com visualização em tabela scrollable
-- Edição em tempo real de registros existentes
-- Exclusão segura com confirmação
-- Vinculação inteligente com abrigos
-- Validação de capacidade dos abrigos
-- Controle automático de status baseado em processos de adoção
+- Cadastro detalhado de animais com informações essenciais
+- Interface intuitiva dividida em lista e formulário
+- Validações rigorosas para todos os campos
+- Integração inteligente com sistema de abrigos
+- Controle automático de lotação e capacidade
+- Sincronização em tempo real entre todas as abas
+- Atualização automática de status baseado em adoções
 
-Estrutura de dados gerenciada:
-- Informações básicas: nome, espécie, raça, idade
-- Características físicas: porte, gênero
-- Status e saúde: status de adoção, temperamento, histórico de saúde
-- Relacionamentos: abrigo vinculado, processos de adoção
+Informações gerenciadas:
+- Dados básicos: nome*, espécie*, raça*, idade*
+- Características: porte*, gênero*, temperamento*
+- Status: disponibilidade*, histórico de saúde
+- Vinculações: abrigo*, processos de adoção
+(* campos obrigatórios)
 
 Validações implementadas:
-- Campos obrigatórios: nome do animal
-- Validação numérica: idade deve ser um número inteiro
-- Capacidade de abrigos: não permite superlotação
-- Integridade referencial: mantém consistência com outras entidades
+- Todos os campos principais são obrigatórios
+- Idade: número inteiro não-negativo
+- Abrigo: verificação de capacidade em tempo real
+- Status: atualização automática baseada em adoções
+- Prevenção de exclusão com processos vinculados
+- Validação de lotação do abrigo selecionado
+
+Sincronização:
+- Atualização global ao salvar/excluir registros
+- Recarregamento automático de todas as abas
+- Manutenção de consistência entre módulos
+- Integridade referencial com processos de adoção
 """
 
 import tkinter as tk
@@ -155,7 +163,7 @@ class AnimalsTab(ttk.Frame):
             ("Porte", ttk.Combobox, {"values": SIZES, "state": "readonly", "width": 30}),
             ("Gênero", ttk.Combobox, {"values": GENDERS, "state": "readonly", "width": 30}),
             ("Status", ttk.Combobox, {"values": ["Disponível", "Em processo", "Adotado", "Indisponível"], "state": "readonly", "width": 30}),
-            ("Temperamento", ttk.Combobox, {"values": ["Calmo", "Agitado", "Ativo", "Estressado", "Brincalhão", "Dócil"], "state": "readonly", "width": 30}),
+            ("Temperamento", ttk.Combobox, {"values": ["", "Dócil", "Sociável", "Brincalhão", "Medroso", "Agressivo"], "state": "readonly", "width": 30}),
             ("Abrigo", ttk.Combobox, {"values": self.get_shelters(), "state": "readonly", "width": 30}),
         ]
 
@@ -186,7 +194,7 @@ class AnimalsTab(ttk.Frame):
         ttk.Button(btn_frame, text="Novo", command=self.new).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Salvar", command=self.save).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Excluir", command=self.delete).pack(side=tk.LEFT, padx=4)
-        ttk.Button(btn_frame, text="Atualizar Página", command=self.load).pack(side=tk.LEFT, padx=4)
+    # Botão 'Atualizar Página' removido; Salvar já recarrega a lista.
 
         # ========== INICIALIZAÇÃO ==========
         self.selected_id = None  # Nenhum animal selecionado inicialmente
@@ -355,51 +363,110 @@ class AnimalsTab(ttk.Frame):
         from models import Shelter
         shelter_val = self.inputs["Abrigo"].get().strip()
         
-        if shelter_val:
-            # Extrai o ID do abrigo do formato "ID - Nome"
-            shelter_id = int(shelter_val.split(" - ")[0])
-            shelter = session.get(Shelter, shelter_id)
-            
-            # Verificação crítica de capacidade
-            animais_atuais = session.query(Animal).filter(Animal.shelter_id == shelter_id).count()
-            if animais_atuais >= shelter.capacity:
-                messagebox.showerror("Erro", f"Abrigo '{shelter.name}' está lotado (capacidade: {shelter.capacity}).")
-                return
+        if not shelter_val:
+            messagebox.showerror("Erro", "Abrigo é obrigatório para o cadastro do animal.")
+            return
 
-        # Determina se é criação ou edição
+        # Extrai o ID do abrigo do formato "ID - Nome"
+        shelter_id = int(shelter_val.split(" - ")[0])
+        shelter = session.get(Shelter, shelter_id)
+        if shelter is None:
+            messagebox.showerror("Erro", "Abrigo selecionado não encontrado.")
+            return
+
+        # Verificação crítica de capacidade
+        # conta apenas animais que ainda não foram adotados
+        animais_atuais = session.query(Animal).filter(Animal.shelter_id == shelter_id, Animal.status != "Adotado").count()
+        if animais_atuais >= shelter.capacity:
+            messagebox.showerror("Erro", f"Abrigo '{shelter.name}' está lotado (capacidade: {shelter.capacity}).")
+            return
+
+        # Validações adicionais: todos os campos do formulário são obrigatórios
+        especie_val = self.inputs["Espécie"].get().strip()
+        raca_val = self.inputs["Raça"].get().strip()
+        idade_raw = self.inputs["Idade"].get().strip()
+        porte_val = self.inputs["Porte"].get().strip()
+        genero_val = self.inputs["Gênero"].get().strip()
+        status_val = self.inputs["Status"].get().strip()
+        temperament_val = self.inputs["Temperamento"].get().strip()
+        observacoes_val = self.inputs["Observações"].get("1.0", tk.END).strip()
+
+        if not especie_val:
+            messagebox.showerror("Erro", "Espécie é obrigatória.")
+            return
+        if not raca_val:
+            messagebox.showerror("Erro", "Raça é obrigatória.")
+            return
+        if not idade_raw:
+            messagebox.showerror("Erro", "Idade é obrigatória.")
+            return
+        try:
+            idade_val = int(idade_raw)
+            if idade_val < 0:
+                raise ValueError()
+        except Exception:
+            messagebox.showerror("Erro", "Idade deve ser um número inteiro não-negativo.")
+            return
+        if not porte_val:
+            messagebox.showerror("Erro", "Porte é obrigatório.")
+            return
+        if not genero_val:
+            messagebox.showerror("Erro", "Gênero é obrigatório.")
+            return
+        if not status_val:
+            messagebox.showerror("Erro", "Status é obrigatório.")
+            return
+        if not temperament_val:
+            messagebox.showerror("Erro", "Temperamento é obrigatório.")
+            return
+
+        # Determina se é criação ou edição (criação somente após validações)
         if self.selected_id:
             animal = session.get(Animal, self.selected_id)
+            if animal is None:
+                messagebox.showerror("Erro", "Animal selecionado não encontrado.")
+                return
         else:
             animal = Animal()
-            session.add(animal)
 
         # Atualização dos dados básicos
         animal.name = name
-        animal.species = self.inputs["Espécie"].get()
+        animal.species = self.inputs["Espécie"].get() or None
         animal.breed = self.inputs["Raça"].get().strip() or None
-        
-        # Processamento da idade com tratamento de erro
-        try: 
-            animal.age = int(self.inputs["Idade"].get().strip())
-        except: 
-            animal.age = 0  # Valor padrão em caso de erro
-            
-        animal.size = self.inputs["Porte"].get()
-        animal.gender = self.inputs["Gênero"].get()
-        animal.status = self.inputs["Status"].get()
-        animal.temperament = self.inputs["Temperamento"].get()
-        animal.health_history = self.inputs["Observações"].get("1.0", tk.END).strip() or None
-        
+
+        # Processamento da idade (já validada)
+        animal.age = idade_val
+
+        animal.size = porte_val
+        animal.gender = genero_val
+        animal.status = status_val
+        animal.temperament = temperament_val
+        animal.health_history = observacoes_val
+
         # Vinculação com abrigo
         if shelter_val:
             animal.shelter_id = shelter_id
         else:
             animal.shelter_id = None
 
-        # Persistência no banco
-        session.commit()
-        self.load()  # Recarrega a lista
-        messagebox.showinfo("Sucesso", "Animal salvo com sucesso.")
+        # Se é novo, só adiciona à sessão agora (após validações)
+        if not self.selected_id:
+            session.add(animal)
+
+        try:
+            session.commit()
+            # Recarrega todas as abas para manter UI consistente
+            try:
+                root = self.winfo_toplevel()
+                if hasattr(root, "reload_all_tabs"):
+                    root.reload_all_tabs()
+            except Exception:
+                pass
+            self.load()  # Recarrega a lista
+            messagebox.showinfo("Sucesso", "Animal salvo com sucesso.")
+        except Exception as e:
+            session.rollback()
+            messagebox.showerror("Erro", f"Erro ao salvar animal: {e}")
 
     def delete(self):
         """
@@ -423,12 +490,30 @@ class AnimalsTab(ttk.Frame):
         if not messagebox.askyesno("Confirmar", "Excluir animal selecionado?"):
             return
             
-        # Execução da exclusão
-        animal = session.get(Animal, self.selected_id)
-        session.delete(animal)
-        session.commit()
-        
-        # Limpeza e atualização da interface
-        self.new()
-        self.load()
-        messagebox.showinfo("Sucesso", "Animal excluído com sucesso.")
+        # Verifica se existem processos de adoção vinculados ao animal
+        processos_vinculados = session.query(AdoptionProcess).filter(AdoptionProcess.animal_id == self.selected_id).count()
+        if processos_vinculados > 0:
+            messagebox.showerror("Erro", f"Não é possível excluir o animal. Existem {processos_vinculados} processos de adoção vinculados a ele.")
+            return
+
+        # Execução da exclusão com tratamento de erros
+        try:
+            animal = session.get(Animal, self.selected_id)
+            session.delete(animal)
+            session.commit()
+
+            # Recarrega todas as abas para manter UI consistente
+            try:
+                root = self.winfo_toplevel()
+                if hasattr(root, "reload_all_tabs"):
+                    root.reload_all_tabs()
+            except Exception:
+                pass
+
+            # Limpeza e atualização da interface
+            self.new()
+            self.load()
+            messagebox.showinfo("Sucesso", "Animal excluído com sucesso.")
+        except Exception as e:
+            session.rollback()
+            messagebox.showerror("Erro", f"Erro ao excluir animal: {e}")

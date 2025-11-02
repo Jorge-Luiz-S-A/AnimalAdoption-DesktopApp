@@ -129,7 +129,7 @@ class SearchTab(BaseTab):
         # Tabela de resultados
         self.tree = ttk.Treeview(
             table_frame,
-            columns=("ID", "Nome", "Espécie", "Idade", "Porte", "Gênero", "Status", "Localização"),
+            columns=("ID", "Nome", "Espécie", "Idade", "Porte", "Gênero", "Status", "Abrigo"),
             show="headings", 
             height=14,  # Altura para 14 linhas
             yscrollcommand=scrollbar.set
@@ -139,7 +139,7 @@ class SearchTab(BaseTab):
         # Configuração das colunas da tabela
         columns_config = [
             ("ID", 60), ("Nome", 140), ("Espécie", 100), ("Idade", 60), 
-            ("Porte", 80), ("Gênero", 80), ("Status", 100), ("Localização", 120)
+            ("Porte", 80), ("Gênero", 80), ("Status", 100), ("Abrigo", 140)
         ]
         
         for column_name, width in columns_config:
@@ -226,7 +226,20 @@ class SearchTab(BaseTab):
         results = query.all()
         
         # Insere cada animal encontrado na tabela
+        # Atualiza status localmente e mostra o nome do abrigo
         for animal in results:
+            # Se houver adoção finalizada, marca como Adotado
+            finalized_adoption = any(ap.status == "Finalizado" for ap in animal.adoptions)
+            in_process = any(ap.status in ("Questionário", "Triagem", "Visita", "Documentos", "Aprovado") for ap in animal.adoptions)
+            if finalized_adoption:
+                animal.status = "Adotado"
+            elif in_process:
+                animal.status = "Em processo"
+
+            shelter_name = animal.shelter.name if animal.shelter else ""
+
+            # Insere apenas os 8 valores correspondentes às colunas
+            # (ID, Nome, Espécie, Idade, Porte, Gênero, Status, Abrigo)
             self.tree.insert("", "end", values=(
                 animal.id,
                 animal.name,
@@ -235,8 +248,11 @@ class SearchTab(BaseTab):
                 animal.size or "",
                 animal.gender or "",
                 animal.status,
-                animal.location or ""
+                shelter_name
             ))
+
+        # Persistir eventuais alterações de status
+        session.commit()
 
         # Exibe o resumo da busca
         self.info(f"Encontrados {len(results)} animais.")

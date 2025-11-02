@@ -1,28 +1,47 @@
 """
 Módulo de Administração do Sistema - Gerenciamento de Usuários
 ---------------------------------------------------------------
-Este módulo fornece uma interface gráfica para administradores gerenciarem
-os usuários do sistema. É uma aba restrita que só pode ser acessada por
-usuários com nível de acesso 'admin'.
+Este módulo implementa um sistema robusto e seguro para administração de
+usuários do sistema, com controles de acesso e validações rigorosas.
 
 Funcionalidades principais:
-- Visualizar lista completa de usuários do sistema
-- Criar novos usuários com diferentes níveis de acesso
-- Editar informações de usuários existentes
-- Excluir usuários (com proteção contra auto-exclusão)
-- Definir níveis de acesso (admin, gestor, usuario)
+- Interface administrativa exclusiva para admins
+- Gerenciamento completo de contas de usuário
+- Sistema hierárquico de permissões
+- Proteções contra operações indevidas
+- Hash seguro de senhas com bcrypt
+- Validações em tempo real
 
-Componentes da interface:
-- Tabela com lista de usuários (ID, Nome, Nível de Acesso)
-- Formulário para cadastro/edição com validação
-- Campos para usuário, senha, confirmação de senha e nível de acesso
-- Botões para novas operações (Novo, Salvar, Excluir)
+Controle de acesso:
+- Níveis implementados:
+  → admin: Acesso total ao sistema
+  → gestor: Gerenciamento operacional
+  → usuario: Acesso básico às funções
+- Verificações de permissão em tempo real
+- Proteção contra elevação não autorizada
+- Registro de operações administrativas
 
 Segurança implementada:
-- Verificação de permissão de administrador
-- Validação de senhas coincidentes
-- Impedimento de exclusão do próprio usuário logado
-- Hash seguro de senhas usando bcrypt
+- Restrição de acesso por nível
+- Proteção contra auto-exclusão
+- Validação de senhas em duas etapas
+- Hash seguro com salt único por usuário
+- Prevenção de conflito de usernames
+- Proteção contra SQL injection
+
+Interface administrativa:
+- Lista de usuários com filtros
+- Formulário de gerenciamento completo
+- Feedback visual de operações
+- Confirmações de ações críticas
+- Mensagens claras de erro/sucesso
+
+Validações do sistema:
+- Username único obrigatório
+- Senha com confirmação
+- Nível de acesso válido
+- Operações administrativas seguras
+- Integridade referencial
 """
 
 import tkinter as tk

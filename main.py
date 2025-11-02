@@ -81,29 +81,49 @@ class MainApp(tk.Tk):
         # ========== ABAS PADRÃO (ACESSO A TODOS) ==========
         
         # Aba de Animais - Gerenciamento completo
-        self.notebook.add(AnimalsTab(self.notebook), text="Animais")
-        
+        self.animals_tab = AnimalsTab(self.notebook)
+        self.notebook.add(self.animals_tab, text="Animais")
+
         # Aba de Adoções - Processos de adoção
-        self.notebook.add(AdoptionsTab(self.notebook), text="Adoções")
-        
+        self.adoptions_tab = AdoptionsTab(self.notebook)
+        self.notebook.add(self.adoptions_tab, text="Adoções")
+
         # Aba de Tutores - Usuários do sistema
-        self.notebook.add(UsersTab(self.notebook), text="Tutores")
-        
+        self.users_tab = UsersTab(self.notebook)
+        self.notebook.add(self.users_tab, text="Tutores")
+
         # Aba de Abrigos - Gerenciamento de abrigos
-        self.notebook.add(ShelterTab(self.notebook), text="Abrigos")
-        
+        self.shelter_tab = ShelterTab(self.notebook)
+        self.notebook.add(self.shelter_tab, text="Abrigos")
+
         # Aba de Pesquisa - Busca avançada
-        self.notebook.add(SearchTab(self.notebook), text="Pesquisa")
+        self.search_tab = SearchTab(self.notebook)
+        self.notebook.add(self.search_tab, text="Pesquisa")
         
         # ========== ABA ADMINISTRATIVA (SOMENTE ADMINS) ==========
         
         # Verifica se o usuário tem permissão de admin
         if usuario_logado and usuario_logado.is_admin():
-            self.notebook.add(AdmTab(self.notebook, usuario_logado), text="ADM")
+            self.adm_tab = AdmTab(self.notebook, usuario_logado)
+            self.notebook.add(self.adm_tab, text="ADM")
         
         # Personaliza o título com informações do usuário
         if usuario_logado:
             self.title(f"Sistema de Abrigo Animal - Usuário: {usuario_logado.username}")
+
+    def reload_all_tabs(self):
+        """
+        Recarrega os dados em todas as abas existentes.
+        Chamado após operações de 'Salvar' para manter a UI sincronizada.
+        """
+        for attr in ("animals_tab", "adoptions_tab", "users_tab", "shelter_tab", "search_tab", "adm_tab"):
+            tab = getattr(self, attr, None)
+            if tab and hasattr(tab, "load"):
+                try:
+                    tab.load()
+                except Exception:
+                    # Não interrompe a recarga das demais abas se uma falhar
+                    pass
 
 if __name__ == "__main__":
     """

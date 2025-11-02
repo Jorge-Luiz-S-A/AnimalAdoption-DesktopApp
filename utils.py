@@ -1,25 +1,45 @@
 """
 Módulo de Utilitários - Funções Auxiliares do Sistema
 -----------------------------------------------------
-Este módulo fornece funções utilitárias reutilizáveis em todo o sistema,
-incluindo conversões, formatações e constantes compartilhadas.
+Este módulo implementa um conjunto robusto de ferramentas, utilitários e
+constantes que são utilizados em todo o sistema, garantindo consistência
+e reusabilidade.
 
-Funcionalidades principais:
-- Constantes predefinidas para comboboxes
-- Funções de parsing e conversão de dados
-- Formatação de valores para exibição
-- Validações e normalizações
+1. Constantes do Sistema:
+   - Status de animais e processos
+   - Etapas padronizadas de adoção
+   - Características físicas (porte, gênero)
+   - Valores predefinidos para seleção
 
-Categorias de utilitários:
-- Constantes: Valores fixos usados em múltiplos módulos
-- Parsers: Conversão de strings para tipos Python
-- Formatters: Formatação de valores para exibição
-- Validators: Validação e normalização de dados
+2. Funções de Conversão:
+   - Parsing seguro de tipos primitivos
+   - Tratamento robusto de erros
+   - Valores padrão configuráveis
+   - Normalização de formatos
 
-Princípios de design:
-- Reusabilidade: Funções genéricas e parametrizáveis
-- Robustez: Tratamento de erros e valores padrão
-- Consistência: Comportamento uniforme em toda a aplicação
+3. Manipulação de Datas:
+   - Conversão de strings para date/datetime
+   - Múltiplos formatos suportados
+   - Validação de datas
+   - Formatação padronizada
+
+4. Formatação de Valores:
+   - Conversão para exibição amigável
+   - Internacionalização (pt-BR)
+   - Tratamento de valores nulos
+   - Consistência visual
+
+5. Validações Utilitárias:
+   - Verificação de tipos
+   - Normalização de strings
+   - Validação de formatos
+   - Tratamento de exceções
+
+6. Recursos Adicionais:
+   - Funções de UI (combobox)
+   - Helpers para logging
+   - Formatadores especializados
+   - Conversores customizados
 """
 
 from datetime import datetime, date
@@ -31,7 +51,7 @@ from typing import Optional
 STATUSES = ["", "Disponível", "Em processo", "Adotado", "Indisponível"]
 
 # Etapas do processo de adoção
-ADOPTION_STEPS = ["Questionário", "Triagem", "Visita", "Documentos", "Aprovado", "Finalizado", "Recusado"]
+ADOPTION_STEPS = ["Questionário", "Documentos", "Visita", "Aprovado", "Finalizado", "Recusado"]
 
 # Portes disponíveis para animais
 SIZES = ["", "Pequeno", "Médio", "Grande"]

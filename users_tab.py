@@ -1,27 +1,33 @@
 """
 Módulo de Gerenciamento de Usuários/Tutores - CRUD Completo
 -----------------------------------------------------------
-Este módulo gerencia todos os usuários (tutores) do sistema de adoção.
-Controla informações de contato, aprovação para adoção e observações.
+Este módulo gerencia todos os usuários (tutores) do sistema de adoção,
+implementando operações completas de CRUD com validações rigorosas.
 
 Funcionalidades principais:
-- Cadastro completo de usuários/tutores
-- Controle de aprovação para processos de adoção
-- Gestão de informações de contato (email, telefone, cidade)
-- Campo de observações para informações adicionais
-- Listagem organizada com status de aprovação
+- Cadastro completo de tutores com informações essenciais
+- Gestão detalhada de informações de contato
+- Integração com sistema de adoção
+- Interface dividida em lista e formulário
+- Atualizações em tempo real com sincronização entre abas
 
 Informações gerenciadas:
-- Dados pessoais: nome, email, telefone, cidade
-- Status de aprovação para adoção
-- Preferências e observações de adoção
+- Dados pessoais: nome completo
+- Contato: email (único), telefone (11 dígitos), cidade
+- Preferências de adoção (observações)
 - Histórico de processos vinculados
 
 Validações implementadas:
-- Nome e email são obrigatórios
-- Email deve ser único no sistema
-- Formatação básica de telefone
-- Prevenção de exclusão de usuários com processos ativos
+- Campos obrigatórios: nome, email, telefone, cidade
+- Validação completa de email com regex
+- Telefone: exatamente 11 dígitos numéricos
+- Prevenção de exclusão com processos ativos
+- Integridade referencial com adoções
+
+Sincronização:
+- Atualização automática entre abas ao salvar/excluir
+- Recarregamento global após alterações
+- Manutenção de consistência de dados
 """
 
 import tkinter as tk
@@ -83,14 +89,14 @@ class UsersTab(ttk.Frame):
 
         # Tabela de usuários
         self.tree = ttk.Treeview(table_frame,
-                                 columns=("ID", "Nome", "Email", "Cidade", "Aprovado"),
+                                 columns=("ID", "Nome", "Email", "Cidade"),
                                  show="headings", 
                                  yscrollcommand=scrollbar.set, 
                                  height=20)
         scrollbar.config(command=self.tree.yview)
 
         # Configuração das colunas
-        for c, w in (("ID", 50), ("Nome", 150), ("Email", 180), ("Cidade", 120), ("Aprovado", 80)):
+        for c, w in (("ID", 50), ("Nome", 150), ("Email", 180), ("Cidade", 120)):
             self.tree.heading(c, text=c.upper())
             self.tree.column(c, width=w, anchor=tk.W)
 
@@ -130,7 +136,6 @@ class UsersTab(ttk.Frame):
             ("Email *", ttk.Entry, {"width": 30}),
             ("Telefone", ttk.Entry, {"width": 30}),
             ("Cidade", ttk.Entry, {"width": 30}),
-            ("Aprovado", ttk.Combobox, {"values": ["", "Sim", "Não"], "state": "readonly", "width": 30}),
         ]
 
         self.inputs = {}
@@ -156,7 +161,7 @@ class UsersTab(ttk.Frame):
         ttk.Button(btn_frame, text="Novo", command=self.new).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Salvar", command=self.save).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Excluir", command=self.delete).pack(side=tk.LEFT, padx=4)
-        ttk.Button(btn_frame, text="Atualizar Página", command=self.load).pack(side=tk.LEFT, padx=4)
+        # Botão 'Atualizar Página' removido. Salvar já recarrega a lista.
 
         # ========== INICIALIZAÇÃO ==========
         self.selected_id = None
@@ -177,7 +182,7 @@ class UsersTab(ttk.Frame):
         for usuario in session.query(User).order_by(User.id.desc()).all():
             self.tree.insert("", "end", iid=str(usuario.id),
                            values=(usuario.id, usuario.name, usuario.email, 
-                                   usuario.city or "", "Sim" if usuario.approved else "Não"))
+                                   usuario.city or ""))
 
     def on_select(self, event):
         """
@@ -207,7 +212,7 @@ class UsersTab(ttk.Frame):
         self.inputs["Cidade"].delete(0, tk.END)
         self.inputs["Cidade"].insert(0, usuario.city or "")
         
-        self.inputs["Aprovado"].set("Sim" if usuario.approved else "Não")
+    # Campo 'Aprovado' removido do formulário
         
         # Preenche observações
         self.inputs["Observações"].delete("1.0", tk.END)
@@ -238,9 +243,35 @@ class UsersTab(ttk.Frame):
             messagebox.showerror("Erro", "Nome e Email são obrigatórios.")
             return
 
+        # Validação básica de email (obrigatório)
+        import re
+        email_pattern = r"[^@\s]+@[^@\s]+\.[^@\s]+"
+        if not re.match(email_pattern, email):
+            messagebox.showerror("Erro", "Email inválido.")
+            session.rollback()
+            return
+
+        # Validação de telefone (obrigatório): deve ter 11 dígitos
+        phone_raw = self.inputs["Telefone"].get().strip()
+        phone_digits = "".join(ch for ch in phone_raw if ch.isdigit())
+        if not phone_raw or len(phone_digits) != 11:
+            messagebox.showerror("Erro", "Telefone inválido. Deve conter 11 dígitos.")
+            session.rollback()
+            return
+
+        # Cidade obrigatória
+        city_val = self.inputs["Cidade"].get().strip()
+        if not city_val:
+            messagebox.showerror("Erro", "Cidade é obrigatória.")
+            session.rollback()
+            return
+
         # Determina se é criação ou edição
         if self.selected_id:
             usuario = session.get(User, self.selected_id)
+            if usuario is None:
+                messagebox.showerror("Erro", "Tutor selecionado não encontrado.")
+                return
         else:
             usuario = User()
             session.add(usuario)
@@ -248,13 +279,19 @@ class UsersTab(ttk.Frame):
         # Atualiza dados básicos
         usuario.name = name
         usuario.email = email
-        usuario.phone = self.inputs["Telefone"].get().strip() or None
-        usuario.city = self.inputs["Cidade"].get().strip() or None
-        usuario.approved = (self.inputs["Aprovado"].get() == "Sim")
+        usuario.phone = phone_digits
+        usuario.city = city_val
         usuario.adoption_preferences = self.inputs["Observações"].get("1.0", tk.END).strip() or None
 
         try:
             session.commit()
+            # Recarrega todas as abas para manter UI consistente
+            try:
+                root = self.winfo_toplevel()
+                if hasattr(root, "reload_all_tabs"):
+                    root.reload_all_tabs()
+            except Exception:
+                pass
             self.load()
             messagebox.showinfo("Sucesso", "Tutor salvo com sucesso.")
         except Exception as e:
@@ -287,6 +324,14 @@ class UsersTab(ttk.Frame):
             session.delete(usuario)
             session.commit()
             
+            # Recarrega todas as abas para manter UI consistente
+            try:
+                root = self.winfo_toplevel()
+                if hasattr(root, "reload_all_tabs"):
+                    root.reload_all_tabs()
+            except Exception:
+                pass
+                
             self.new()
             self.load()
             messagebox.showinfo("Sucesso", "Tutor excluído com sucesso.")

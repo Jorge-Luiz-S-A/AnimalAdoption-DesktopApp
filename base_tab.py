@@ -1,20 +1,49 @@
 """
-Classe Base para Abas do Sistema - Framework Comum
---------------------------------------------------
-Esta classe fornece uma base sólida para todas as abas do sistema, implementando
-funcionalidades comuns, estilos padronizados e métodos utilitários que são
-reutilizados em toda a aplicação.
+Framework Base do Sistema - Classe Abstrata de Interface
+-----------------------------------------------------
+Este módulo implementa a estrutura fundamental para todas as interfaces 
+do sistema, fornecendo um framework robusto e consistente para criação 
+de abas e formulários.
 
-Funcionalidades fornecidas:
-- Configuração centralizada de estilos visuais
-- Métodos padronizados para exibição de mensagens ao usuário
-- Sistema de criação de campos de formulário com labels
-- Tratamento consistente de erros e informações
+1. Arquitetura Base:
+   - Classe abstrata para herança
+   - Padrões de design modernos
+   - Reutilização inteligente
+   - Framework expansível
 
-Padrões de design implementados:
-- DRY (Don't Repeat Yourself): Código comum centralizado
-- Consistency: Interface visual padronizada
-- Maintainability: Facilidade de manutenção e extensão
+2. Sistema Visual:
+   - Estilos centralizados
+   - Temas consistentes
+   - Paleta de cores profissional
+   - Tipografia padronizada
+   - Ícones e símbolos
+
+3. Componentes Reutilizáveis:
+   - Campos de formulário
+   - Mensagens ao usuário
+   - Validações padrão
+   - Tooltips informativos
+   - Grids responsivos
+
+4. Recursos de Interface:
+   - Labels padronizados
+   - Campos obrigatórios
+   - Botões de ação
+   - Feedback visual
+   - Mensagens de erro/sucesso
+
+5. Padrões Implementados:
+   - DRY (Don't Repeat Yourself)
+   - SOLID Principles
+   - Clean Code
+   - Interface Segregation
+   - Template Method
+
+6. Características Técnicas:
+   - Herança de ttk.Frame
+   - Estilos ttk customizados
+   - Sistema de grid
+   - Gerenciamento de eventos
 """
 
 import tkinter as tk

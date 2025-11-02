@@ -1,28 +1,37 @@
 """
-Pacote Principal - Sistema de Gerenciamento de Abrigo Animal
-------------------------------------------------------------
-Este é o pacote principal que exporta todos os componentes do sistema
-para facilitar imports organizados e controle de versão.
+Pacote Principal - Sistema de Gestão de Abrigo Animal v1.1.0
+-----------------------------------------------------------
+Este módulo atua como ponto central de inicialização e configuração do
+sistema, gerenciando imports, dependências e estado inicial da aplicação.
 
-Funcionalidades do pacote:
-- Exportação organizada de todos os módulos
-- Controle de versão centralizado
-- Inicialização automática do sistema
-- Interface de import limpa
+1. Estrutura do Sistema:
+   Módulos Principais:
+   - Models → Entidades e regras de negócio
+   - Database → Persistência e queries
+   - Utils → Ferramentas compartilhadas
+   - UI → Interface gráfica completa
+   - Auth → Sistema de autenticação
 
-Estrutura de exports:
-- Models: Classes de entidade do banco
-- Database: Configuração e sessão do banco
-- Utils: Funções auxiliares e constantes
-- Tabs: Todas as abas da interface
-- Metadados: Versão, autor, descrição
+2. Inicialização do Sistema:
+   - Criação de esquema do banco
+   - Dados iniciais necessários
+   - Verificação de integridade
+   - Configuração de ambiente
 
-Versão 1.1.0 - Características:
-- Sistema completo de gerenciamento de abrigo
-- Interface desktop com tkinter
-- Banco SQLite com SQLAlchemy ORM
-- Autenticação segura com níveis de acesso
-- CRUD completo para todas as entidades
+3. Interface Pública:
+   Exports Organizados:
+   - Entidades principais
+   - Funções utilitárias
+   - Componentes de UI
+   - Constantes do sistema
+   - Helpers e decorators
+
+6. Recursos Implementados:
+   - CRUD completo de entidades
+   - Autenticação multinível
+   - Interface desktop moderna
+   - Banco de dados SQLite
+   - Validações em camadas
 """
 
 from .models import Animal, User, Shelter, AdoptionProcess, AuthUser

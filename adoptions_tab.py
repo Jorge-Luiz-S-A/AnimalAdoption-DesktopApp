@@ -1,27 +1,40 @@
 """
 Módulo de Gerenciamento de Processos de Adoção - Fluxo Completo
 ---------------------------------------------------------------
-Este módulo gerencia todo o ciclo de vida dos processos de adoção no sistema
-do abrigo. Desde o questionário inicial até a finalização da adoção, com
-controle de status e atualização automática dos animais.
+Este módulo implementa o gerenciamento completo do ciclo de vida dos processos 
+de adoção, desde a seleção inicial até a finalização, com controles rigorosos 
+e sincronização automática.
 
 Funcionalidades principais:
-- Criação e acompanhamento de processos de adoção
-- Controle de status com fluxo definido
-- Registro de datas de visitas (online e presencial)
-- Vinculação entre animais disponíveis e usuários aprovados
-- Atualização automática do status dos animais
-- Sistema de observações e notas do processo
+- Gestão completa de processos de adoção
+- Fluxo de status bem definido e controlado
+- Interface intuitiva dividida em lista/formulário
+- Controle de datas de visitas e aprovações
+- Sistema detalhado de notas e observações
+- Sincronização automática com outras abas
+- Atualizações em tempo real de status
 
-Fluxo de status implementado:
-1. Questionário → 2. Triagem → 3. Visita Online → 4. Visita Presencial → 
-5. Documentos → 6. Aprovado → 7. Finalizado/Recusado
+Fluxo de aprovação:
+1. Questionário: Avaliação inicial
+2. Documentos: Verificação documental
+3. Visita: Encontro presencial
+4. Aprovado: Processo aceito
+5. Finalizado/Recusado: Conclusão
 
-Validações de integridade:
-- Só permite animais com status "Disponível"
-- Só permite usuários com status "Aprovado"
-- Atualização automática do animal quando adoção é finalizada
-- Restauração do status do animal quando adoção é cancelada
+Validações implementadas:
+- Campos obrigatórios: animal, tutor, status
+- Validação de datas de visita
+- Verificação de disponibilidade do animal
+- Controle de um processo por animal
+- Prevenção de conflitos de status
+- Integridade com outros módulos
+
+Sincronização:
+- Atualização global ao salvar/excluir
+- Recarregamento automático de todas as abas
+- Status do animal atualizado automaticamente
+- Restauração de estado em cancelamentos
+- Manutenção de consistência de dados
 """
 
 import tkinter as tk
@@ -133,8 +146,7 @@ class AdoptionsTab(ttk.Frame):
             ("Animal *", ttk.Combobox, {"values": self.get_animals(), "state": "readonly", "width": 30}),
             ("Usuário *", ttk.Combobox, {"values": self.get_users(), "state": "readonly", "width": 30}),
             ("Status", ttk.Combobox, {"values": ADOPTION_STEPS, "state": "readonly", "width": 30}),
-            ("Visita Online", ttk.Entry, {"width": 30}),  # Data no formato DD/MM/AAAA
-            ("Visita Presencial", ttk.Entry, {"width": 30}),  # Data no formato DD/MM/AAAA
+            ("Visita", ttk.Entry, {"width": 30}),  # Data no formato DD/MM/AAAA (apenas uma visita)
         ]
 
         self.inputs = {}
@@ -160,7 +172,7 @@ class AdoptionsTab(ttk.Frame):
         ttk.Button(btn_frame, text="Novo", command=self.new).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Salvar", command=self.save).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Excluir", command=self.delete).pack(side=tk.LEFT, padx=4)
-        ttk.Button(btn_frame, text="Atualizar Página", command=self.load).pack(side=tk.LEFT, padx=4)
+        # Nota: botão 'Atualizar Página' removido. A função de recarregar é realizada após Salvar/Excluir.
 
         # ========== INICIALIZAÇÃO ==========
         self.selected_id = None
@@ -178,9 +190,11 @@ class AdoptionsTab(ttk.Frame):
         Returns:
             list: Lista de strings no formato "ID - Nome" para animais disponíveis
         """
-        # Filtra apenas animais com status "Disponível"
+        # Filtra apenas animais com status próximo de "Disponível".
+        # Usa busca case-insensitive/ilike para cobrir variações sem acento
+        # ou espaços acidentais (ex: 'Disponivel', ' Disponível ').
         animais_disponiveis = session.query(Animal).filter(
-            Animal.status == "Disponível"
+            Animal.status.ilike("%dispon%")
         ).all()
         
         return [f"{a.id} - {a.name}" for a in animais_disponiveis]
@@ -196,11 +210,9 @@ class AdoptionsTab(ttk.Frame):
             list: Lista de strings no formato "ID - Nome" para usuários aprovados
         """
         # Filtra apenas usuários aprovados
-        usuarios_aprovados = session.query(User).filter(
-            User.approved == True
-        ).all()
-        
-        return [f"{u.id} - {u.name}" for u in usuarios_aprovados]
+        # Retorna todos os usuários (campo 'Aprovado' foi removido do formulário)
+        usuarios = session.query(User).all()
+        return [f"{u.id} - {u.name}" for u in usuarios]
 
     # ========== OPERAÇÕES CRUD ==========
 
@@ -248,13 +260,10 @@ class AdoptionsTab(ttk.Frame):
         self.inputs["Status"].set(adocao.status or "")
         
         # Preenche datas de visita (formatadas)
-        self.inputs["Visita Online"].delete(0, tk.END)
-        if adocao.virtual_visit_at:
-            self.inputs["Visita Online"].insert(0, adocao.virtual_visit_at.strftime("%d/%m/%Y"))
-            
-        self.inputs["Visita Presencial"].delete(0, tk.END)
+        # Campo único de visita (mapeado para in_person_visit_at)
+        self.inputs["Visita"].delete(0, tk.END)
         if adocao.in_person_visit_at:
-            self.inputs["Visita Presencial"].insert(0, adocao.in_person_visit_at.strftime("%d/%m/%Y"))
+            self.inputs["Visita"].insert(0, adocao.in_person_visit_at.strftime("%d/%m/%Y"))
             
         # Preenche observações
         self.inputs["Notas"].delete("1.0", tk.END)
@@ -290,10 +299,55 @@ class AdoptionsTab(ttk.Frame):
         animal_id = int(animal_val.split(" - ")[0])
         user_id = int(user_val.split(" - ")[0])
 
+        # Validação: status obrigatório; visita obrigatória apenas para etapas que a exigem
+        status_val = self.inputs["Status"].get().strip()
+        visita_raw = self.inputs["Visita"].get().strip()
+        notes_raw = self.inputs["Notas"].get("1.0", tk.END).strip()
+
+        if not status_val:
+            messagebox.showerror("Erro", "Status é obrigatório.")
+            return
+
+        # Somente exigir data de visita quando o processo estiver nas etapas que requerem visita
+        visita_required_statuses = ("Visita", "Aprovado", "Finalizado")
+        if status_val in visita_required_statuses and not visita_raw:
+            messagebox.showerror("Erro", "Visita (data) é obrigatória para o status selecionado.")
+            return
+
         # Determina se é criação ou edição
+        is_new = False
         if self.selected_id:
             adocao = session.get(AdoptionProcess, self.selected_id)
+            if adocao is None:
+                messagebox.showerror("Erro", "Adoção selecionada não encontrada.")
+                return
         else:
+            # Antes de criar, verifica se o animal já está em um processo ativo
+            animal_id_check = int(animal_val.split(" - ")[0])
+            active = session.query(AdoptionProcess).filter(
+                AdoptionProcess.animal_id == animal_id_check,
+                AdoptionProcess.status.notin_(("Finalizado", "Recusado"))
+            ).count()
+            if active > 0:
+                messagebox.showerror("Erro", "Este animal já está em um processo de adoção ativo.")
+                return
+            is_new = True
+
+        # Processa data única de visita (in_person_visit_at)
+        from datetime import datetime
+        visita = self.inputs["Visita"].get().strip()
+        try:
+            visita_dt = None
+            if visita:
+                visita_dt = datetime.strptime(visita, "%d/%m/%Y")
+        except ValueError:
+            # garante que sessão não fique com transações parciais
+            session.rollback()
+            messagebox.showerror("Erro", "Formato de data inválido. Use DD/MM/AAAA.")
+            return
+
+        # Agora que validações passaram, cria/atualiza o objeto
+        if is_new:
             adocao = AdoptionProcess()
             session.add(adocao)
 
@@ -302,34 +356,28 @@ class AdoptionsTab(ttk.Frame):
         adocao.user_id = user_id
         adocao.status = self.inputs["Status"].get().strip() or None
         adocao.notes = self.inputs["Notas"].get("1.0", tk.END).strip() or None
-
-        # Processa datas de visita com tratamento de erro
-        from datetime import datetime
-        visita_online = self.inputs["Visita Online"].get().strip()
-        visita_presencial = self.inputs["Visita Presencial"].get().strip()
-        
-        try:
-            if visita_online:
-                adocao.virtual_visit_at = datetime.strptime(visita_online, "%d/%m/%Y")
-            else:
-                adocao.virtual_visit_at = None
-                
-            if visita_presencial:
-                adocao.in_person_visit_at = datetime.strptime(visita_presencial, "%d/%m/%Y")
-            else:
-                adocao.in_person_visit_at = None
-        except ValueError:
-            messagebox.showerror("Erro", "Formato de data inválido. Use DD/MM/AAAA.")
-            return
+        adocao.in_person_visit_at = visita_dt
 
         try:
             # Salva o processo
             session.commit()
-            
+
             # Atualiza automaticamente o status do animal
             adocao.update_animal_status()
+            # Se o processo está em andamento, garante que o animal fique em processo
+            if adocao.animal:
+                if adocao.status in ["Questionário", "Visita", "Documentos", "Aprovado"]:
+                    adocao.animal.status = "Em processo"
             session.commit()
-            
+
+            # Recarrega abas locais e globais
+            try:
+                root = self.winfo_toplevel()
+                if hasattr(root, "reload_all_tabs"):
+                    root.reload_all_tabs()
+            except Exception:
+                pass
+
             self.load()
             messagebox.showinfo("Sucesso", "Adoção salva com sucesso. Status do animal atualizado automaticamente.")
         except Exception as e:
@@ -359,6 +407,14 @@ class AdoptionsTab(ttk.Frame):
             
             session.delete(adocao)
             session.commit()
+            
+            # Recarrega todas as abas para manter UI consistente
+            try:
+                root = self.winfo_toplevel()
+                if hasattr(root, "reload_all_tabs"):
+                    root.reload_all_tabs()
+            except Exception:
+                pass
             
             self.new()
             self.load()

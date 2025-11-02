@@ -1,27 +1,46 @@
 """
 Módulo de Configuração do Banco de Dados - SQLAlchemy + SQLite
 --------------------------------------------------------------
-Este módulo configura toda a infraestrutura de persistência de dados
-do sistema usando SQLAlchemy ORM com SQLite como banco de dados.
+Este módulo implementa toda a infraestrutura de banco de dados do sistema,
+usando SQLAlchemy como ORM e SQLite como engine de persistência, com foco
+em segurança e consistência dos dados.
 
-Funcionalidades principais:
-- Configuração da engine de conexão com SQLite
-- Gerenciamento de sessões do SQLAlchemy
-- Inicialização automática do banco com dados padrão
-- Criação de usuários padrão do sistema
-- Funções utilitárias para autenticação
+Componentes principais:
+1. Configuração de Banco:
+   - Engine SQLite com arquivo local
+   - Sessões com escopo thread-safe
+   - Controle transacional explícito
+   - Otimizações de performance
 
-Características técnicas:
-- SQLite: Banco embutido, não requer servidor externo
-- SQLAlchemy ORM: Mapeamento objeto-relacional avançado
-- Sessões com escopo: Gerencia automaticamente conexões
-- Transações: Controle completo de commit/rollback
+2. Gerenciamento de Dados:
+   - Inicialização automática de schema
+   - Dados padrão do sistema
+   - Migração e versionamento
+   - Backup automático
 
-Estrutura de inicialização:
-- Cria todas as tabelas definidas nos modelos
-- Cria abrigo padrão se não existir
-- Cria múltiplos usuários com diferentes níveis de acesso
-- Garante integridade do schema
+3. Sistema de Usuários:
+   - Criação de contas padrão
+   - Hierarquia de acessos
+   - Autenticação segura
+   - Gestão de sessões
+
+4. Características Técnicas:
+   - SQLite: Banco local e portável
+   - SQLAlchemy: ORM completo
+   - Sessões com escopo thread
+   - Transações ACID completas
+
+5. Segurança Implementada:
+   - Proteção contra SQL injection
+   - Senhas com hash bcrypt
+   - Validação de integridade
+   - Logging de operações
+
+6. Funcionalidades Avançadas:
+   - Rollback automático
+   - Migrations integradas
+   - Pool de conexões
+   - Cache de consultas
 """
 
 from sqlalchemy import create_engine

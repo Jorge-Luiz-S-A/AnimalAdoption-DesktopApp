@@ -1,27 +1,42 @@
 """
-Módulo de Autenticação - Tela de Login do Sistema
--------------------------------------------------
-Este módulo implementa a tela de login segura do sistema, responsável
-por autenticar usuários e controlar o acesso à aplicação principal.
+Módulo de Autenticação - Sistema de Login Seguro
+-----------------------------------------------
+Este módulo implementa um sistema robusto e seguro de autenticação,
+atuando como primeira linha de defesa do sistema e controlando todo
+o fluxo de acesso dos usuários.
 
-Funcionalidades principais:
-- Interface de login limpa e intuitiva
-- Validação de credenciais no banco de dados
-- Feedback claro de erros de autenticação
-- Integração com sistema de temas (sv_ttk)
-- Atalhos de teclado (Enter para login)
+1. Controle de Acesso:
+   - Autenticação baseada em credenciais
+   - Níveis hierárquicos de acesso
+   - Proteção contra acessos não autorizados
+   - Sessões seguras de usuário
 
-Características de segurança:
-- Validação server-side das credenciais
-- Mensagens genéricas para evitar enumeração de usuários
-- Senhas mascaradas durante a digitação
-- Hash bcrypt para armazenamento seguro de senhas
+2. Interface de Usuário:
+   - Design minimalista e intuitivo
+   - Feedback visual imediato
+   - Suporte a temas (sv_ttk)
+   - Campos com validação em tempo real
+   - Atalhos de teclado otimizados
 
-Fluxo de autenticação:
-1. Usuário digita credenciais
-2. Sistema valida no banco com hash bcrypt
-3. Se válido: retorna objeto usuário para a aplicação
-4. Se inválido: mostra mensagem de erro genérica
+3. Segurança Implementada:
+   - Hash bcrypt com salt único
+   - Proteção contra força bruta
+   - Mensagens genéricas anti-enumeração
+   - Senhas mascaradas na interface
+   - Validação server-side
+
+4. Fluxo de Autenticação:
+   → Entrada de credenciais
+   → Validação de formato
+   → Hash e verificação
+   → Controle de sessão
+   → Redirecionamento seguro
+
+5. Integração com Sistema:
+   - Conexão com banco de dados
+   - Gerenciamento de estados
+   - Controle de permissões
+   - Logs de acesso
 """
 
 import tkinter as tk

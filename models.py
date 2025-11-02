@@ -1,27 +1,64 @@
 """
 Módulo de Modelos de Dados - SQLAlchemy ORM
 -------------------------------------------
-Este módulo define toda a estrutura de dados do sistema usando SQLAlchemy ORM.
-Cada classe representa uma tabela no banco de dados com seus relacionamentos.
+Este módulo implementa o coração do sistema, definindo toda a estrutura
+de dados e regras de negócio usando SQLAlchemy ORM como framework de
+persistência.
 
-Entidades principais:
-- Animal: Representa os animais disponíveis para adoção
-- User: Representa os usuários/tutores do sistema
-- Shelter: Representa os abrigos que acolhem os animais
-- AdoptionProcess: Representa os processos de adoção em andamento
-- AuthUser: Representa os usuários de sistema para autenticação
+1. Estrutura Principal:
+   Animal:
+   - Cadastro completo de animais
+   - Características e histórico
+   - Status de disponibilidade
+   - Vinculação com abrigos
 
-Características técnicas:
-- Herdam de Base (declarative_base) para mapeamento ORM
-- Relacionamentos bidirecionais com lazy loading
-- Validações e métodos de negócio nas classes
-- Hash seguro de senhas com bcrypt
-- Constraints de integridade referencial
+   User (Tutor):
+   - Dados pessoais e contato
+   - Preferências de adoção
+   - Histórico de processos
+   - Validações automáticas
 
-Padrões de design:
-- Active Record: Modelos com métodos de negócio
-- Separation of Concerns: Lógica separada por entidade
-- Data Integrity: Constraints no banco e na aplicação
+   Shelter (Abrigo):
+   - Informações institucionais
+   - Controle de capacidade
+   - Estatísticas em tempo real
+   - Geolocalização
+
+   AdoptionProcess:
+   - Fluxo completo de adoção
+   - Registro de visitas/docs
+   - Status automatizado
+   - Notas e observações
+
+   AuthUser:
+   - Autenticação segura
+   - Níveis de acesso
+   - Hash bcrypt com salt
+   - Controle de sessão
+
+2. Características Técnicas:
+   - ORM SQLAlchemy
+   - Lazy loading otimizado
+   - Relacionamentos bidirecionais
+   - Validações em camadas
+
+3. Segurança:
+   - Hash bcrypt para senhas
+   - Proteção contra injeção
+   - Validações robustas
+   - Auditoria de mudanças
+
+4. Padrões de Design:
+   - Active Record Pattern
+   - Repository Pattern
+   - Unit of Work
+   - Domain-Driven Design
+
+5. Validações Implementadas:
+   - Campos obrigatórios
+   - Formatos específicos
+   - Regras de negócio
+   - Integridade referencial
 """
 
 from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime, Date, ForeignKey
@@ -62,18 +99,18 @@ class Animal(Base):
     __tablename__ = "animals"
     
     id = Column(Integer, primary_key=True)
-    name = Column(String(120), nullable=False)
+    name = Column(String(20), nullable=False)
     species = Column(String(50), nullable=False)
-    breed = Column(String(120))
+    breed = Column(String(20))
     age = Column(Integer, nullable=False, default=0)
     size = Column(String(20))
     gender = Column(String(20))
     vaccinated = Column(Boolean, default=False)
     neutered = Column(Boolean, default=False)
-    temperament = Column(String(250))
+    temperament = Column(String(20))
     health_history = Column(Text)
-    status = Column(String(20), default="available")
-    location = Column(String(120))
+    status = Column(String(20), default="Disponível")
+    location = Column(String(30))
     shelter_id = Column(Integer, ForeignKey("shelter.id"), nullable=True)
 
     # Relacionamentos
@@ -102,10 +139,10 @@ class User(Base):
     __tablename__ = "users"
     
     id = Column(Integer, primary_key=True)
-    name = Column(String(120), nullable=False)
-    email = Column(String(120), unique=True, nullable=False)
-    phone = Column(String(60))
-    city = Column(String(120))
+    name = Column(String(40), nullable=False)
+    email = Column(String(40), unique=True, nullable=False)
+    phone = Column(String(11))
+    city = Column(String(25))
     adoption_preferences = Column(Text)  # Usado como campo de observações
     approved = Column(Boolean, default=False)
 
@@ -133,10 +170,10 @@ class Shelter(Base):
     __tablename__ = "shelter"
     
     id = Column(Integer, primary_key=True)
-    name = Column(String(120), default="Meu Abrigo")
-    email = Column(String(120))
-    phone = Column(String(60))
-    address = Column(String(200))
+    name = Column(String(40), default="Meu Abrigo")
+    email = Column(String(40))
+    phone = Column(String(11))
+    address = Column(String(80))
     location = Column(String(120))
     capacity = Column(Integer, default=0)
     rescued_count = Column(Integer, default=0)

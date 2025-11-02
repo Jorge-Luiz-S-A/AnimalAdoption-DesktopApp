@@ -1,29 +1,42 @@
 """
 Módulo de Gerenciamento de Abrigos - CRUD Completo
 --------------------------------------------------
-Este módulo fornece uma interface completa para gerenciar todos os abrigos
-do sistema. Inclui controle de capacidade, estatísticas automáticas e
-gerenciamento de informações de contato.
+Este módulo implementa uma interface completa e intuitiva para gerenciar os
+abrigos do sistema, com foco em controle de capacidade e estatísticas em 
+tempo real.
 
 Funcionalidades principais:
-- Cadastro completo de abrigos com informações de contato
-- Controle de capacidade máxima de animais
-- Cálculo automático de estatísticas:
-  - Animais resgatados (total histórico)
-  - Animais adotados (com adoção finalizada)
-  - Animais atuais (resgatados - adotados)
-- Listagem organizada com todas as informações
-- Validação de capacidade para evitar superlotação
+- Cadastro completo de abrigos com validações
+- Interface dividida em lista e formulário
+- Estatísticas calculadas automaticamente
+- Controle rigoroso de capacidade
+- Sincronização em tempo real entre abas
+- Integridade referencial com animais
+- Dashboard de ocupação e adoções
 
-Estatísticas calculadas automaticamente:
-- Resgatados: total de animais vinculados ao abrigo
-- Adotados: animais com processos finalizados
-- Atuais: diferença entre resgatados e adotados
+Informações gerenciadas:
+- Dados básicos: nome*, email*, telefone*
+- Localização: endereço completo*
+- Capacidade: limite máximo de animais*
+- Estatísticas em tempo real:
+  → Total de animais resgatados
+  → Total de adoções finalizadas
+  → Ocupação atual
+(* campos obrigatórios)
 
 Validações implementadas:
-- Capacidade deve ser número positivo
-- Email deve ter formato válido (se informado)
-- Prevenção de exclusão de abrigos com animais vinculados
+- Campos obrigatórios: todos
+- Email: formato válido com regex
+- Telefone: exatamente 11 dígitos
+- Capacidade: número positivo maior que zero
+- Prevenção de exclusão com animais
+- Verificação de lotação em tempo real
+
+Sincronização:
+- Atualização global ao salvar/excluir
+- Recarregamento automático de todas as abas
+- Estatísticas atualizadas em tempo real
+- Manutenção de consistência com outros módulos
 """
 
 import tkinter as tk
@@ -159,7 +172,7 @@ class ShelterTab(ttk.Frame):
         ttk.Button(btn_frame, text="Novo", command=self.new).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Salvar", command=self.save).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Excluir", command=self.delete).pack(side=tk.LEFT, padx=4)
-        ttk.Button(btn_frame, text="Atualizar Página", command=self.load).pack(side=tk.LEFT, padx=4)
+    # Botão 'Atualizar Página' removido; Salvar já recarrega a lista.
 
         # ========== INICIALIZAÇÃO ==========
         self.selected_id = None
@@ -257,28 +270,75 @@ class ShelterTab(ttk.Frame):
         Valida a capacidade para garantir que seja um número válido
         e define um nome padrão se não for informado.
         """
+        # Coleta e validação preliminar (todos os campos agora são obrigatórios)
+        name_val = self.inputs["Nome"].get().strip()
+        email_val = self.inputs["Email"].get().strip()
+        phone_raw = self.inputs["Telefone"].get().strip()
+        address_val = self.inputs["Endereço"].get().strip()
+
+        # Valida nome
+        if not name_val:
+            messagebox.showerror("Erro", "Nome do abrigo é obrigatório.")
+            session.rollback()
+            return
+
+        # Valida email obrigatório
+        import re
+        email_pattern = r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+"
+        if not email_val or not re.match(email_pattern, email_val):
+            messagebox.showerror("Erro", "Email inválido ou ausente.")
+            session.rollback()
+            return
+
+        # Validação de telefone obrigatório: deve ter 11 dígitos
+        phone_digits = "".join(ch for ch in phone_raw if ch.isdigit())
+        if not phone_raw or len(phone_digits) != 11:
+            messagebox.showerror("Erro", "Telefone inválido. Deve conter 11 dígitos.")
+            session.rollback()
+            return
+
+        # Valida endereço obrigatório
+        if not address_val:
+            messagebox.showerror("Erro", "Endereço é obrigatório.")
+            session.rollback()
+            return
+
+        # Processa capacidade (converte para inteiro e exige > 0)
+        try:
+            capacity_val = int(self.inputs["Capacidade"].get().strip())
+            if capacity_val <= 0:
+                raise ValueError()
+        except Exception:
+            messagebox.showerror("Erro", "Capacidade deve ser um número inteiro maior que zero.")
+            session.rollback()
+            return
+
         # Determina se é criação ou edição
         if self.selected_id:
             abrigo = session.get(Shelter, self.selected_id)
+            if abrigo is None:
+                messagebox.showerror("Erro", "Abrigo selecionado não encontrado.")
+                return
         else:
             abrigo = Shelter()
             session.add(abrigo)
 
         # Atualiza dados básicos
-        abrigo.name = self.inputs["Nome"].get().strip() or "Meu Abrigo"
-        abrigo.email = self.inputs["Email"].get().strip() or None
-        abrigo.phone = self.inputs["Telefone"].get().strip() or None
-        abrigo.address = self.inputs["Endereço"].get().strip() or None
-        
-        # Processa capacidade (converte para inteiro)
-        try:
-            abrigo.capacity = int(self.inputs["Capacidade"].get().strip() or 0)
-        except ValueError:
-            messagebox.showerror("Erro", "Capacidade deve ser um número válido.")
-            return
+        abrigo.name = name_val
+        abrigo.email = email_val
+        abrigo.phone = phone_digits
+        abrigo.address = address_val
+        abrigo.capacity = capacity_val
 
         try:
             session.commit()
+            # Recarrega todas as abas
+            try:
+                root = self.winfo_toplevel()
+                if hasattr(root, "reload_all_tabs"):
+                    root.reload_all_tabs()
+            except Exception:
+                pass
             self.load()
             messagebox.showinfo("Sucesso", "Abrigo salvo com sucesso.")
         except Exception as e:
@@ -309,6 +369,14 @@ class ShelterTab(ttk.Frame):
             abrigo = session.get(Shelter, self.selected_id)
             session.delete(abrigo)
             session.commit()
+            
+            # Recarrega todas as abas para manter UI consistente
+            try:
+                root = self.winfo_toplevel()
+                if hasattr(root, "reload_all_tabs"):
+                    root.reload_all_tabs()
+            except Exception:
+                pass
             
             self.new()
             self.load()
