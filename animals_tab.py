@@ -490,7 +490,6 @@ class AnimalsTab(ttk.Frame):
         if not messagebox.askyesno("Confirmar", "Excluir animal selecionado?"):
             return
             
-<<<<<<< HEAD
         # Verifica se existem processos de adoção vinculados ao animal
         processos_vinculados = session.query(AdoptionProcess).filter(AdoptionProcess.animal_id == self.selected_id).count()
         if processos_vinculados > 0:
@@ -518,14 +517,3 @@ class AnimalsTab(ttk.Frame):
         except Exception as e:
             session.rollback()
             messagebox.showerror("Erro", f"Erro ao excluir animal: {e}")
-=======
-        # Execução da exclusão
-        animal = session.get(Animal, self.selected_id)
-        session.delete(animal)
-        session.commit()
-        
-        # Limpeza e atualização da interface
-        self.new()
-        self.load()
-        messagebox.showinfo("Sucesso", "Animal excluído com sucesso.")
->>>>>>> 55172dea57b5efe2dd74c80b452208b9b3547179

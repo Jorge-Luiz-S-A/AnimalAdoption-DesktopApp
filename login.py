@@ -41,7 +41,7 @@ o fluxo de acesso dos usuários.
 
 import tkinter as tk
 from tkinter import ttk, messagebox
-import sv_ttk  # Tema moderno integrado
+import sv_ttk
 
 from database import session
 from models import AuthUser
@@ -59,7 +59,7 @@ def login_screen():
         
     Comportamento:
         - Janela modal centralizada na tela
-        - Tema visual moderno consistente com a aplicação principal
+        - Tema visual consistente com a aplicação principal
         - Foco automático no campo de usuário
         - Atalho Enter para submeter o formulário
         - Botão Cancelar para sair da aplicação
@@ -71,7 +71,7 @@ def login_screen():
     root.resizable(False, False)
     root.eval('tk::PlaceWindow . center')  # Centraliza na tela
 
-    # Aplica o tema moderno sv_ttk para consistência visual
+    # Aplica o mesmo tema usado no app principal para consistência
     sv_ttk.set_theme("light")
 
     # Container principal para organizar os widgets
