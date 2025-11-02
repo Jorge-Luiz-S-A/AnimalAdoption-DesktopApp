@@ -1,4 +1,6 @@
+# database.py (com usuários padrão)
 """
+<<<<<<< HEAD
 Módulo de Configuração do Banco de Dados - SQLAlchemy + SQLite
 --------------------------------------------------------------
 Este módulo implementa toda a infraestrutura de banco de dados do sistema,
@@ -41,27 +43,19 @@ Componentes principais:
    - Migrations integradas
    - Pool de conexões
    - Cache de consultas
+=======
+Database com dados iniciais
+>>>>>>> 55172dea57b5efe2dd74c80b452208b9b3547179
 """
-
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
-from models import Base
+from sqlalchemy.orm import sessionmaker
+from models import Base, AuthUser, Shelter
 
-# Configuração da engine do SQLite
-# "sqlite:///shelter.db" - Cria arquivo shelter.db no diretório atual
-# echo=False - Desativa log SQL (para produção)
-# future=True - Habilita comportamentos da versão 2.0
-engine = create_engine("sqlite:///shelter.db", echo=False, future=True)
-
-# Configuração da sessão com escopo
-# scoped_session: Fornece a mesma sessão para mesma thread
-# autoflush=False: Controle manual de flush
-# autocommit=False: Controle manual de transações
-SessionLocal = scoped_session(sessionmaker(bind=engine, autoflush=False, autocommit=False))
+engine = create_engine("sqlite:///shelter.db")
+SessionLocal = sessionmaker(bind=engine)
 session = SessionLocal()
 
-# LISTA DE USUÁRIOS PADRÃO DO SISTEMA
-# Estes usuários são criados automaticamente na inicialização
+# Usuários padrão do sistema
 USUARIOS_PADRAO = [
     {"username": "admin", "password": "admin123", "nivel_acesso": "admin"},
     {"username": "gestor", "password": "gestor123", "nivel_acesso": "gestor"},
@@ -69,120 +63,27 @@ USUARIOS_PADRAO = [
 ]
 
 def init_db():
-    """
-    Inicializa o banco de dados criando tabelas e dados padrão.
-    
-    Esta função é executada automaticamente na inicialização do sistema
-    e garante que o banco esteja pronto para uso com:
-    - Todas as tabelas criadas
-    - Dados iniciais necessários
-    - Usuários padrão para acesso
-    
-    Fluxo de execução:
-    1. Cria todas as tabelas baseadas nos modelos
-    2. Cria abrigo padrão se não existir
-    3. Cria usuários padrão com diferentes níveis de acesso
-    4. Confirma todas as alterações
-    
-    Exceções são tratadas com rollback para manter consistência.
-    """
-    # Cria todas as tabelas definidas nos modelos
+    """Inicializa banco com dados padrão"""
     Base.metadata.create_all(bind=engine)
-
-    from models import Shelter, AuthUser
-
-    # Cria abrigo padrão se não existir nenhum
+    
+    # Cria abrigo padrão
     if not session.query(Shelter).first():
-        session.add(Shelter(name="Meu Abrigo", capacity=50))
-
-    # Cria múltiplos usuários padrão
-    for usuario_info in USUARIOS_PADRAO:
-        # Verifica se o usuário já existe
-        if not session.query(AuthUser).filter_by(username=usuario_info["username"]).first():
+        session.add(Shelter(name="Abrigo Central", capacity=50))
+    
+    # Cria usuários padrão
+    for user_info in USUARIOS_PADRAO:
+        if not session.query(AuthUser).filter_by(username=user_info["username"]).first():
             usuario = AuthUser(
-                username=usuario_info["username"],
-                nivel_acesso=usuario_info["nivel_acesso"]
+                username=user_info["username"],
+                nivel_acesso=user_info["nivel_acesso"]
             )
-            usuario.set_password(usuario_info["password"])
+            usuario.set_password(user_info["password"])
             session.add(usuario)
-            print(f"Usuário padrão criado: {usuario_info['username']}")
-
-    try:
-        session.commit()
-        print("Banco de dados inicializado com sucesso!")
-        print(f"Usuários disponíveis: {[u['username'] for u in USUARIOS_PADRAO]}")
-    except Exception as e:
-        session.rollback()
-        print(f"Erro ao inicializar banco de dados: {e}")
-        raise
-
-def listar_usuarios():
-    """
-    Lista todos os usuários do sistema.
-    
-    Returns:
-        list: Lista de objetos AuthUser com todos os usuários cadastrados
-    """
-    from models import AuthUser
-    return session.query(AuthUser).all()
-
-def criar_usuario(username, password, nivel_acesso="usuario"):
-    """
-    Cria um novo usuário no sistema.
-    
-    Args:
-        username (str): Nome de usuário único
-        password (str): Senha em texto claro (será hasheada)
-        nivel_acesso (str): Nível de acesso (admin, gestor, usuario)
-        
-    Returns:
-        bool: True se usuário foi criado, False se já existe
-        
-    Exemplo de uso:
-        criar_usuario("novo_user", "senha123", "usuario")
-    """
-    from models import AuthUser
-    
-    # Verifica se usuário já existe
-    if session.query(AuthUser).filter_by(username=username).first():
-        print(f"Usuário '{username}' já existe!")
-        return False
-    
-    # Cria novo usuário
-    usuario = AuthUser(username=username, nivel_acesso=nivel_acesso)
-    usuario.set_password(password)  # Gera hash da senha
-    session.add(usuario)
+            print(f"Usuário criado: {user_info['username']}")
     
     try:
         session.commit()
-        print(f"Usuário '{username}' criado com sucesso!")
-        return True
+        print("Banco inicializado com sucesso!")
     except Exception as e:
         session.rollback()
-        print(f"Erro ao criar usuário: {e}")
-        return False
-
-def verificar_usuario(username, password):
-    """
-    Verifica se as credenciais de usuário são válidas.
-    
-    Args:
-        username (str): Nome de usuário
-        password (str): Senha em texto claro
-        
-    Returns:
-        bool: True se credenciais são válidas, False caso contrário
-        
-    Exemplo de uso:
-        if verificar_usuario("admin", "admin123"):
-            print("Login válido")
-    """
-    from models import AuthUser
-    
-    # Busca usuário pelo username
-    usuario = session.query(AuthUser).filter_by(username=username).first()
-    
-    # Verifica se usuário existe e senha está correta
-    if usuario and usuario.check_password(password):
-        return True
-    return False
+        print(f"Erro: {e}")
