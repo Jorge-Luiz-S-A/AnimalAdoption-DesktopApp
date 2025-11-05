@@ -32,14 +32,7 @@ de abas e formulários.
    - Feedback visual
    - Mensagens de erro/sucesso
 
-5. Padrões Implementados:
-   - DRY (Don't Repeat Yourself)
-   - SOLID Principles
-   - Clean Code
-   - Interface Segregation
-   - Template Method
-
-6. Características Técnicas:
+5. Características Técnicas:
    - Herança de ttk.Frame
    - Estilos ttk customizados
    - Sistema de grid
@@ -81,7 +74,7 @@ class BaseTab(ttk.Frame):
         # Configuração de estilos visuais padronizados
         self.style.configure("Header.TLabel", 
                            font=("Arial", 10, "bold"),
-                           foreground="#2c3e50")  # Azul escuro elegante
+                           foreground="#2c3e50")  # Azul escuro
         
         self.style.configure("Required.TLabel", 
                            foreground="#e74c3c",  # Vermelho para indicar obrigatoriedade

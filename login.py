@@ -1,7 +1,7 @@
 """
 Módulo de Autenticação - Sistema de Login Seguro
 -----------------------------------------------
-Este módulo implementa um sistema robusto e seguro de autenticação,
+Este módulo implementa um sistema de autenticação, 
 atuando como primeira linha de defesa do sistema e controlando todo
 o fluxo de acesso dos usuários.
 
@@ -9,10 +9,8 @@ o fluxo de acesso dos usuários.
    - Autenticação baseada em credenciais
    - Níveis hierárquicos de acesso
    - Proteção contra acessos não autorizados
-   - Sessões seguras de usuário
 
 2. Interface de Usuário:
-   - Design minimalista e intuitivo
    - Feedback visual imediato
    - Suporte a temas (sv_ttk)
    - Campos com validação em tempo real

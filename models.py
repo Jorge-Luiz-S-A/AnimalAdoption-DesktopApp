@@ -35,30 +35,6 @@ persistência.
    - Níveis de acesso
    - Hash bcrypt com salt
    - Controle de sessão
-
-2. Características Técnicas:
-   - ORM SQLAlchemy
-   - Lazy loading otimizado
-   - Relacionamentos bidirecionais
-   - Validações em camadas
-
-3. Segurança:
-   - Hash bcrypt para senhas
-   - Proteção contra injeção
-   - Validações robustas
-   - Auditoria de mudanças
-
-4. Padrões de Design:
-   - Active Record Pattern
-   - Repository Pattern
-   - Unit of Work
-   - Domain-Driven Design
-
-5. Validações Implementadas:
-   - Campos obrigatórios
-   - Formatos específicos
-   - Regras de negócio
-   - Integridade referencial
 """
 
 from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime, Date, ForeignKey
@@ -73,8 +49,7 @@ class Animal(Base):
     Modelo que representa um animal no sistema do abrigo.
     
     Esta classe mapeia a tabela 'animals' e contém todas as informações
-    sobre os animais disponíveis para adoção, incluindo características
-    físicas, status de saúde e vinculação com abrigos.
+    sobre os animais disponíveis para adoção.
     
     Atributos:
         id (int): Identificador único (chave primária)
@@ -84,12 +59,9 @@ class Animal(Base):
         age (int): Idade em anos (padrão 0)
         size (str): Porte (Pequeno, Médio, Grande)
         gender (str): Gênero (Macho, Fêmea)
-        vaccinated (bool): Se foi vacinado
-        neutered (bool): Se foi castrado
         temperament (str): Temperamento/comportamento
-        health_history (str): Histórico de saúde
         status (str): Status de adoção
-        location (str): Localização física
+        location (str): Localização física (Abrigo)
         shelter_id (int): ID do abrigo vinculado
         
     Relacionamentos:
@@ -105,10 +77,7 @@ class Animal(Base):
     age = Column(Integer, nullable=False, default=0)
     size = Column(String(20))
     gender = Column(String(20))
-    vaccinated = Column(Boolean, default=False)
-    neutered = Column(Boolean, default=False)
     temperament = Column(String(20))
-    health_history = Column(Text)
     status = Column(String(20), default="Disponível")
     location = Column(String(30))
     shelter_id = Column(Integer, ForeignKey("shelter.id"), nullable=True)
@@ -122,7 +91,7 @@ class User(Base):
     Modelo que representa um usuário/tutor no sistema.
     
     Esta classe gerencia as informações dos tutores interessados em
-    adotar animais, incluindo dados de contato e status de aprovação.
+    adotar animais.
     
     Atributos:
         id (int): Identificador único
@@ -130,8 +99,7 @@ class User(Base):
         email (str): Email único (obrigatório)
         phone (str): Telefone para contato
         city (str): Cidade de residência
-        adoption_preferences (str): Observações/preferências
-        approved (bool): Se está aprovado para adoção
+        adoption_preferences (str): Observações
         
     Relacionamentos:
         adoptions: Lista de processos de adoção do usuário
@@ -162,7 +130,6 @@ class Shelter(Base):
         email (str): Email de contato
         phone (str): Telefone de contato
         address (str): Endereço físico
-        location (str): Localização/região
         capacity (int): Capacidade máxima
         rescued_count (int): Contador de resgatados
         adopted_count (int): Contador de adotados
@@ -174,7 +141,6 @@ class Shelter(Base):
     email = Column(String(40))
     phone = Column(String(11))
     address = Column(String(80))
-    location = Column(String(120))
     capacity = Column(Integer, default=0)
     rescued_count = Column(Integer, default=0)
     adopted_count = Column(Integer, default=0)
@@ -183,24 +149,21 @@ class AdoptionProcess(Base):
     """
     Modelo que representa um processo de adoção.
     
-    Controla todo o fluxo de adoção desde o questionário inicial
-    até a finalização, com registro de datas e status.
+    Controla todo o fluxo de adoção.
     
     Atributos:
         id (int): Identificador único
         animal_id (int): ID do animal (chave estrangeira)
         user_id (int): ID do usuário (chave estrangeira)
         status (str): Status atual do processo
-        questionnaire_score (int): Pontuação do questionário
         virtual_visit_at (DateTime): Data da visita online
         in_person_visit_at (DateTime): Data da visita presencial
-        docs_submitted (bool): Documentos entregues
         background_check_ok (bool): Verificação de antecedentes
         notes (str): Observações do processo
         
     Relacionamentos:
         animal: Animal sendo adotado
-        user: Usuário adotante
+        user: Tutor adotante
     """
     __tablename__ = "adoptions"
     
@@ -208,11 +171,8 @@ class AdoptionProcess(Base):
     animal_id = Column(Integer, ForeignKey("animals.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(String(30), default="questionnaire")
-    questionnaire_score = Column(Integer)
     virtual_visit_at = Column(DateTime)
     in_person_visit_at = Column(DateTime)
-    docs_submitted = Column(Boolean, default=False)
-    background_check_ok = Column(Boolean)
     notes = Column(Text)
 
     # Relacionamentos
@@ -233,7 +193,7 @@ class AdoptionProcess(Base):
         if self.animal:
             if self.status == "Finalizado":
                 self.animal.status = "Adotado"
-            elif self.status in ["Questionário", "Triagem", "Visita", "Documentos", "Aprovado"]:
+            elif self.status in ["Questionário", "Visita", "Documentos", "Aprovado"]:
                 self.animal.status = "Em processo"
 
 class AuthUser(Base):

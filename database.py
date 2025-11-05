@@ -2,8 +2,7 @@
 Módulo de Configuração do Banco de Dados - SQLAlchemy + SQLite
 --------------------------------------------------------------
 Este módulo implementa toda a infraestrutura de banco de dados do sistema,
-usando SQLAlchemy como ORM e SQLite como engine de persistência, com foco
-em segurança e consistência dos dados.
+usando SQLAlchemy como ORM e SQLite como engine de persistência.
 
 Componentes principais:
 1. Configuração de Banco:
@@ -35,12 +34,6 @@ Componentes principais:
    - Senhas com hash bcrypt
    - Validação de integridade
    - Logging de operações
-
-6. Funcionalidades Avançadas:
-   - Rollback automático
-   - Migrations integradas
-   - Pool de conexões
-   - Cache de consultas
 """
 
 from sqlalchemy import create_engine

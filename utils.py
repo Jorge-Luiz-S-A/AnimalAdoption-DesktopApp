@@ -1,7 +1,7 @@
 """
 Módulo de Utilitários - Funções Auxiliares do Sistema
 -----------------------------------------------------
-Este módulo implementa um conjunto robusto de ferramentas, utilitários e
+Este módulo implementa um conjunto de ferramentas, utilitários e
 constantes que são utilizados em todo o sistema, garantindo consistência
 e reusabilidade.
 
@@ -51,7 +51,7 @@ from typing import Optional
 STATUSES = ["", "Disponível", "Em processo", "Adotado", "Indisponível"]
 
 # Etapas do processo de adoção
-ADOPTION_STEPS = ["Questionário", "Documentos", "Visita", "Aprovado", "Finalizado", "Recusado"]
+ADOPTION_STEPS = ["", "Questionário", "Documentos", "Visita", "Aprovado", "Finalizado", "Recusado"]
 
 # Portes disponíveis para animais
 SIZES = ["", "Pequeno", "Médio", "Grande"]

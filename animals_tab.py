@@ -1,7 +1,7 @@
 """
 Módulo de Gerenciamento de Animais - CRUD Completo
 --------------------------------------------------
-Este módulo fornece uma interface completa e robusta para gerenciar o cadastro 
+Este módulo fornece uma interface completa para gerenciar o cadastro 
 de animais no sistema de abrigo, com foco em usabilidade e integridade dos dados.
 
 Funcionalidades principais:
@@ -16,7 +16,7 @@ Funcionalidades principais:
 Informações gerenciadas:
 - Dados básicos: nome*, espécie*, raça*, idade*
 - Características: porte*, gênero*, temperamento*
-- Status: disponibilidade*, histórico de saúde
+- Status: disponibilidade*
 - Vinculações: abrigo*, processos de adoção
 (* campos obrigatórios)
 
