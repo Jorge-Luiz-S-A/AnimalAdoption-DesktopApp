@@ -84,13 +84,13 @@ class MainApp(tk.Tk):
         self.animals_tab = AnimalsTab(self.notebook)
         self.notebook.add(self.animals_tab, text="Animais")
 
-        # Aba de Adoções - Processos de adoção
-        self.adoptions_tab = AdoptionsTab(self.notebook)
-        self.notebook.add(self.adoptions_tab, text="Adoções")
-
         # Aba de Tutores - Usuários do sistema
         self.users_tab = UsersTab(self.notebook)
         self.notebook.add(self.users_tab, text="Tutores")
+
+        # Aba de Adoções - Processos de adoção
+        self.adoptions_tab = AdoptionsTab(self.notebook)
+        self.notebook.add(self.adoptions_tab, text="Adoções")
 
         # Aba de Abrigos - Gerenciamento de abrigos
         self.shelter_tab = ShelterTab(self.notebook)

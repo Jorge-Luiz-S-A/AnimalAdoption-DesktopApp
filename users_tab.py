@@ -1,7 +1,7 @@
 """
 Módulo de Gerenciamento de Usuários/Tutores - CRUD Completo
 -----------------------------------------------------------
-Este módulo gerencia todos os usuários (tutores) do sistema de adoção,
+Este módulo gerencia todos os tutores do sistema de adoção,
 implementando operações completas de CRUD com validações rigorosas.
 
 Funcionalidades principais:

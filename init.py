@@ -37,7 +37,7 @@ sistema, gerenciando imports, dependências e estado inicial da aplicação.
 from .models import Animal, User, Shelter, AdoptionProcess, AuthUser
 from .database import session, engine, init_db
 from .utils import (
-    STATUSES, ADOPTION_STEPS, SIZES, GENDERS,
+    STATUSES, ADOPTION_STEPS, SIZES, GENDERS, TEMPERAMENTS, SPECIES,
     parse_bool, parse_int, parse_date_str, parse_dt_str,
     yes_no, combobox_set
 )
@@ -64,7 +64,7 @@ __all__ = [
     'session', 'engine', 'init_db',
     
     # Utils
-    'STATUSES', 'ADOPTION_STEPS', 'SIZES', 'GENDERS',
+    'STATUSES', 'ADOPTION_STEPS', 'SIZES', 'GENDERS', 'TEMPERAMENTS', 'SPECIES',
     'parse_bool', 'parse_int', 'parse_date_str', 'parse_dt_str',
     'yes_no', 'combobox_set',
     

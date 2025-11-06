@@ -30,8 +30,8 @@ import tkinter as tk
 from tkinter import ttk
 from base_tab import BaseTab
 from database import session
-from models import Animal
-from utils import SIZES, parse_int
+from models import Animal, Shelter
+from utils import SIZES, parse_int, SPECIES
 
 class SearchTab(BaseTab):
     """
@@ -78,20 +78,20 @@ class SearchTab(BaseTab):
         filt_row1 = ttk.Frame(filt)
         filt_row1.pack(fill=tk.X, padx=10, pady=10)
 
-        # Filtro: Espécie
+        # Filtro: Espécie (combobox com espécies disponíveis em utils)
         ttk.Label(filt_row1, text="Espécie").grid(row=0, column=0, padx=(0, 5))
-        self.e_species = ttk.Entry(filt_row1, width=18)
-        self.e_species.grid(row=0, column=1, padx=(0, 15))
+        self.cb_species = ttk.Combobox(filt_row1, values=SPECIES, state="readonly", width=16)
+        self.cb_species.grid(row=0, column=1, padx=(0, 15))
 
-        # Filtro: Porte (combobox com valores predefinidos)
+        # Filtro: Porte (combobox com valores disponíveis em utils)
         ttk.Label(filt_row1, text="Porte").grid(row=0, column=2, padx=(0, 5))
         self.cb_size = ttk.Combobox(filt_row1, values=SIZES, state="readonly", width=14)
         self.cb_size.grid(row=0, column=3, padx=(0, 15))
 
-        # Filtro: Localização
-        ttk.Label(filt_row1, text="Local").grid(row=0, column=4, padx=(0, 5))
-        self.e_location = ttk.Entry(filt_row1, width=18)
-        self.e_location.grid(row=0, column=5)
+        # Filtro: Abrigo (combobox com abrigos cadastrados no sistema)
+        ttk.Label(filt_row1, text="Abrigo").grid(row=0, column=4, padx=(0, 5))
+        self.cb_shelter = ttk.Combobox(filt_row1, values=self.get_shelters(), state="readonly", width=18)
+        self.cb_shelter.grid(row=0, column=5)
 
         # Segunda linha de filtros (idade mínima/máxima e botões)
         filt_row2 = ttk.Frame(filt)
@@ -157,9 +157,10 @@ class SearchTab(BaseTab):
         que o usuário comece uma nova busca do zero.
         """
         # Limpa todos os campos de entrada
-        self.e_species.delete(0, tk.END)
+        # Limpa comboboxes e campos
+        self.cb_species.set("")
         self.cb_size.set("")
-        self.e_location.delete(0, tk.END)
+        self.cb_shelter.set("")
         self.e_amin.delete(0, tk.END)
         self.e_amax.delete(0, tk.END)
         
@@ -184,7 +185,6 @@ class SearchTab(BaseTab):
         6. Exibição do contador de resultados
         
         Técnicas de filtragem:
-        - Texto: usa ILIKE para busca case-insensitive
         - Combobox: filtro exato quando selecionado
         - Números: filtro por faixa (>= e <=)
         """
@@ -192,23 +192,29 @@ class SearchTab(BaseTab):
         query = session.query(Animal)
 
         # Coleta e limpa os valores dos filtros
-        species = self.e_species.get().strip()
+        species = self.cb_species.get().strip()
         size = self.cb_size.get().strip()
-        location = self.e_location.get().strip()
+        shelter_val = self.cb_shelter.get().strip()
         amin = self.e_amin.get().strip()
         amax = self.e_amax.get().strip()
 
         # Aplica filtro de espécie (busca parcial)
         if species:
+            # Espécie vem do combobox (valores exatos)
             query = query.filter(Animal.species.ilike(f"%{species}%"))
             
         # Aplica filtro de porte (filtro exato)
         if size:
             query = query.filter(Animal.size.ilike(f"%{size}%"))
             
-        # Aplica filtro de localização (busca parcial)
-        if location:
-            query = query.filter(Animal.location.ilike(f"%{location}%"))
+        # Aplica filtro de abrigo (filtro exato por ID extraído do combobox)
+        if shelter_val:
+            try:
+                shelter_id = int(shelter_val.split(" - ")[0])
+                query = query.filter(Animal.shelter_id == shelter_id)
+            except Exception:
+                # se parsing falhar, ignora o filtro
+                pass
             
         # Aplica filtro de idade mínima
         if amin:
@@ -256,3 +262,11 @@ class SearchTab(BaseTab):
 
         # Exibe o resumo da busca
         self.info(f"Encontrados {len(results)} animais.")
+
+    def get_shelters(self):
+        """
+        Retorna a lista de abrigos cadastrados formatada para combobox.
+
+        Formato: "{id} - {name}" como exibido em outras abas do sistema.
+        """
+        return [f"{s.id} - {s.name}" for s in session.query(Shelter).order_by(Shelter.id).all()]

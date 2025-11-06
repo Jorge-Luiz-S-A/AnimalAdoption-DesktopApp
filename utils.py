@@ -59,6 +59,12 @@ SIZES = ["", "Pequeno", "Médio", "Grande"]
 # Gêneros disponíveis para animais
 GENDERS = ["", "Macho", "Fêmea"]
 
+# Especíes de animais disponíveis
+SPECIES = ["", "Cachorro", "Gato", "Coelho", "Pássaro", "Roedor"]
+
+# Temperamentos disponíveis para animais
+TEMPERAMENTS = ["", "Dócil", "Sociável", "Brincalhão", "Medroso", "Agressivo"]
+
 # ========== FUNÇÕES DE PARSING ==========
 
 def parse_bool(value: str) -> bool:

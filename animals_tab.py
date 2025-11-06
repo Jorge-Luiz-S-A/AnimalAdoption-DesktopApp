@@ -39,7 +39,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from database import session
 from models import Animal, AdoptionProcess
-from utils import SIZES, GENDERS
+from utils import SIZES, GENDERS, STATUSES, SPECIES, TEMPERAMENTS
 
 class AnimalsTab(ttk.Frame):
     """
@@ -48,9 +48,6 @@ class AnimalsTab(ttk.Frame):
     Esta classe implementa uma interface completa dividida em dois painéis:
     - Painel esquerdo: Lista de animais em formato de tabela
     - Painel direito: Formulário detalhado para cadastro/edição
-    
-    A interface oferece operações completas de CRUD com validações
-    de negócio e integração com outras entidades do sistema.
     
     Atributos:
         selected_id (int): ID do animal atualmente selecionado para edição
@@ -157,13 +154,13 @@ class AnimalsTab(ttk.Frame):
         # Definição dos campos do formulário
         fields = [
             ("Nome *", ttk.Entry, {"width": 30}),
-            ("Espécie", ttk.Combobox, {"values": ["Gato", "Cachorro", "Pássaro"], "state": "readonly", "width": 30}),
+            ("Espécie", ttk.Combobox, {"values": SPECIES, "state": "readonly", "width": 30}),
             ("Raça", ttk.Entry, {"width": 30}),
             ("Idade", ttk.Entry, {"width": 30}),
             ("Porte", ttk.Combobox, {"values": SIZES, "state": "readonly", "width": 30}),
             ("Gênero", ttk.Combobox, {"values": GENDERS, "state": "readonly", "width": 30}),
-            ("Status", ttk.Combobox, {"values": ["Disponível", "Em processo", "Adotado", "Indisponível"], "state": "readonly", "width": 30}),
-            ("Temperamento", ttk.Combobox, {"values": ["", "Dócil", "Sociável", "Brincalhão", "Medroso", "Agressivo"], "state": "readonly", "width": 30}),
+            ("Status", ttk.Combobox, {"values": STATUSES, "state": "readonly", "width": 30}),
+            ("Temperamento", ttk.Combobox, {"values": TEMPERAMENTS, "state": "readonly", "width": 30}),
             ("Abrigo", ttk.Combobox, {"values": self.get_shelters(), "state": "readonly", "width": 30}),
         ]
 
@@ -194,7 +191,6 @@ class AnimalsTab(ttk.Frame):
         ttk.Button(btn_frame, text="Novo", command=self.new).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Salvar", command=self.save).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_frame, text="Excluir", command=self.delete).pack(side=tk.LEFT, padx=4)
-    # Botão 'Atualizar Página' removido; Salvar já recarrega a lista.
 
         # ========== INICIALIZAÇÃO ==========
         self.selected_id = None  # Nenhum animal selecionado inicialmente
@@ -375,7 +371,7 @@ class AnimalsTab(ttk.Frame):
             return
 
         # Verificação crítica de capacidade
-        # conta apenas animais que ainda não foram adotados
+        # Conta apenas animais que ainda não foram adotados
         animais_atuais = session.query(Animal).filter(Animal.shelter_id == shelter_id, Animal.status != "Adotado").count()
         if animais_atuais >= shelter.capacity:
             messagebox.showerror("Erro", f"Abrigo '{shelter.name}' está lotado (capacidade: {shelter.capacity}).")
@@ -399,6 +395,10 @@ class AnimalsTab(ttk.Frame):
             return
         if not idade_raw:
             messagebox.showerror("Erro", "Idade é obrigatória.")
+            return
+        # Rejeita entradas em formato float (contendo '.' ou ',')
+        if "." in idade_raw or "," in idade_raw:
+            messagebox.showerror("Erro", "Idade deve ser um número inteiro não-negativo.")
             return
         try:
             idade_val = int(idade_raw)

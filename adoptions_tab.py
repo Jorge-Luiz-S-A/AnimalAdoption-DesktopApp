@@ -209,8 +209,7 @@ class AdoptionsTab(ttk.Frame):
         Returns:
             list: Lista de strings no formato "ID - Nome" para usuários aprovados
         """
-        # Filtra apenas usuários aprovados
-        # Retorna todos os usuários (campo 'Aprovado' foi removido do formulário)
+        # Retorna todos os usuários
         usuarios = session.query(User).all()
         return [f"{u.id} - {u.name}" for u in usuarios]
 
